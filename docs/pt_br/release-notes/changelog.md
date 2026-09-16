@@ -6,6 +6,45 @@ outline: 2
 
 Esta página documenta as alterações em cada versão do Kimi Code CLI.
 
+## 0.43.1 (2026-09-15)
+
+### Funcionalidades
+
+- Adicionar suporte nativo à área de transferência no Linux X11, para que copiar a partir da TUI não dependa mais do suporte OSC 52 do terminal.
+
+### Aprimoramentos
+
+- Reduzir travamentos do event loop e a sobrecarga do GC em sessões com muitos subagentes simultâneos.
+
+### Correções de bugs
+
+- Corrigir o comportamento em que pressionar Ctrl+C enquanto os subagentes estão em execução encerrava toda a CLI em vez de apenas interromper os subagentes.
+- Corrigir a renderização progressivamente mais lenta a cada rodada de execuções grandes do AgentSwarm.
+- Corrigir a memória que não era liberada quando os escopos dos subagentes eram descartados.
+- Corrigir o modo tower que confundia agentes recém-criados com entradas do registro de agentes de sessões anteriores.
+- Parar de retornar sessões excluídas na pesquisa global antes que o índice de pesquisa seja atualizado.
+- Corrigir as cores dos links em tabelas Markdown com quebra de linha e a ordenação do preenchimento automático de arquivos com `@`.
+
+## 0.43.0 (2026-09-14)
+
+### Funcionalidades
+
+- web: Os títulos de sessão gerados por IA agora estão sempre ativados — um título é gerado após o primeiro turno e pode ser regenerado pelo campo de renomear, sem necessidade de uma flag experimental.
+- Excluir sessões pelo seletor de sessões: pressione Ctrl+X em uma sessão e, em seguida, y para confirmar.
+- Adicionar `-y, --yes` ao `kimi upgrade` (alias `kimi update`) para ignorar a solicitação de confirmação e instalar a atualização diretamente.
+- Adicionar a opção de configuração `loop_control.compaction_max_attempts` para definir o número máximo total de tentativas para uma solicitação de compactação com falha (padrão 5). Consulte [`loop_control`](../configuration/config-files.md#loop_control) para obter detalhes.
+
+### Aprimoramentos
+
+- Ignorar a solicitação de confirmação para comandos rm -rf que tenham como destino apenas caminhos `/tmp` ou `/temp`.
+- Permitir que mensagens de direcionamento interrompam esperas por tarefas em segundo plano.
+- Os limites de tempo dos objetivos não contabilizam mais o tempo em que a sessão permanece fechada, e o limite de 24 horas foi removido.
+- Adicionar a variável de ambiente `KIMI_CODE_PERMISSION_MODE_REMINDER`: defina-a como `0` para impedir a injeção dos lembretes automáticos sobre o modo de permissão no contexto do modelo.
+
+### Correções de bugs
+
+- Corrigir vários problemas conhecidos e realizar diversos aprimoramentos. Consulte o [changelog no GitHub](https://github.com/MoonshotAI/kimi-code/blob/main/apps/kimi-code/CHANGELOG.md) para ver entradas mais técnicas.
+
 ## 0.42.0 (2026-09-09)
 
 ### Funcionalidades
@@ -88,97 +127,156 @@ Esta página documenta as alterações em cada versão do Kimi Code CLI.
 - Respeitar entradas de configuração `[experimental]` explícitas em vez do interruptor principal `KIMI_CODE_EXPERIMENTAL_FLAG`, de modo que uma flag definida como `false` no config.toml permaneça desativada; as variáveis `KIMI_CODE_EXPERIMENTAL_<NAME>` específicas de cada recurso ainda substituem ambas.
 - Corrigir vários problemas conhecidos e realizar diversos aprimoramentos. Consulte o [changelog no GitHub](https://github.com/MoonshotAI/kimi-code/blob/main/apps/kimi-code/CHANGELOG.md) para ver entradas mais técnicas.
 
+## 0.41.0 (2026-09-04)
+
+### Funcionalidades
+
+- web: Adicionar modo de colaboração entre múltiplos agentes do tower (experimental), habilitado por meio do comando `/tower` ou do menu de mais opções do compositor; `/tower` permite especificar uma branch base (por exemplo, `/tower add-new-feature`).
+- web: Adicionar anotação de seleção — selecione um texto nas mensagens, nas pré-visualizações de arquivos, nos painéis de diff e de alterações por turno ou no terminal para adicionar um comentário ou citá-lo no chat.
+- CLI: Adicionar um aviso de avaliação da sessão que convida o usuário a avaliá-la nos momentos apropriados acima da caixa de entrada.
+
+### Aprimoramentos
+
+- O modo de permissão automática não bloqueia mais comandos perigosos e comandos que não podem ser analisados estaticamente.
+- Lembrar o modelo de seu limite de contexto antes da compactação automática e, após a compactação, direcioná-lo para o log de eventos da sessão para obter detalhes exatos.
+- web: Renomear os três modos de permissão para Always Ask / Ask When Needed / Never Ask e atualizar suas descrições; ao mudar para o modo de permissão Ask When Needed ou Never Ask, agora é exibido um aviso de que os arquivos podem ser modificados ou excluídos diretamente nesse modo.
+- web: Esc não fecha mais o painel de detalhes à direita.
+- web: Reformular os comandos Bash no painel à direita no estilo de terminal.
+- Entregar as respostas de perguntas em segundo plano diretamente ao agente, em vez de por meio de um arquivo de saída salvo.
+- As mensagens finais do subagente com menos de 200 caracteres não são mais reenviadas para expansão.
+
+### Correções de bugs
+
+- Corrigir o modo de impressão (`kimi -p`) que perdia os registros da sessão quando a execução era encerrada devido a um erro ou a um sinal de término.
+- Corrigir o modo de impressão (`kimi -p`) que ignorava a variável de ambiente `KIMI_DISABLE_TELEMETRY`.
+- Modo tower (experimental): corrigir o modo tower que nunca era iniciado quando habilitado por meio de `[experimental] tower = true` no config.toml em vez da variável de ambiente, e fazer `/tower` funcionar em diretórios que não são repositórios Git; os erros de habilitação agora identificam o bloqueio real.
+- Corrigir perguntas em segundo plano que eram canceladas assim que o agente terminava seu turno.
+- Corrigir a retomada de um subagente por seu ID de agente depois que a sessão era reaberta em um novo processo; o subagente retomado segue o modo de permissão atual e é associado ao seu próprio perfil nas regras de permissão.
+- web: Corrigir as pré-visualizações de alterações de arquivos por turno que exibiam linhas adicionadas/removidas que nunca existiram e contagens de linhas imprecisas quando o mesmo arquivo era editado várias vezes em um único turno; os cartões de alteração agora mostram apenas estatísticas exatas de linhas.
+- web: Corrigir a configuração do nível de esforço de raciocínio padrão que não podia ser definida para o nível mais alto (Max).
+- Corrigir vários problemas conhecidos e realizar diversos aprimoramentos. Consulte o [changelog no GitHub](https://github.com/MoonshotAI/kimi-code/blob/main/apps/kimi-code/CHANGELOG.md) para ver entradas mais técnicas.
+
+## 0.40.1 (2026-09-02)
+
+### Correções de bugs
+
+- Corrigir a condição para exibir o aviso de migração do kimi-cli.
+
+## 0.40.0 (2026-09-02)
+
+### Funcionalidades
+
+- web: Adicionar um painel de Plugins às Configurações para navegar pelo marketplace de plugins e instalar, habilitar, desabilitar e remover plugins.
+- web: Permitir a ativação de várias skills a partir de uma única mensagem.
+- Adicionar o comando `kimi session list` para listar sessões pela linha de comando.
+- Modo tower (experimental, `KIMI_CODE_EXPERIMENTAL_TOWER=1`): o agente não entra mais no modo tower por conta própria — ative-o com `/tower on` ou `/tower <base-branch>`.
+- A configuração do modelo de subagente (`[secondary_model]`) deixa de ser experimental e passa a ser estável.
+- Bloquear comandos de shell perigosos, como shutdown, reboot ou rm -rf, no modo Auto, e sempre perguntar antes de executá-los nos modos Manual e YOLO; desabilite a proteção com `[permission] dangerous_command_guard = false` ou `KIMI_CODE_DANGEROUS_COMMAND_GUARD=false`.
+
+### Aprimoramentos
+
+- Preservar comentários, ordem das chaves e formatação no config.toml quando os valores de configuração forem atualizados.
+- Remover a restrição do workspace sobre o parâmetro cwd da ferramenta Bash.
+- Definir como padrão a opção "Trust this folder" na solicitação de confiança do workspace, em vez de "Don't trust".
+- O subcomando `kimi acp` não respeita mais `KIMI_CODE_LEGACY_FLAG`; ele sempre é executado pelo mecanismo de agente padrão.
+- web: Adicionar uma opção de quebra de linha de código ao painel de diff e simplificar seu cabeçalho.
+
+### Correções de bugs
+
+- Respeitar entradas explícitas de configuração `[experimental]` em vez da chave mestra `KIMI_CODE_EXPERIMENTAL_FLAG`, de modo que uma flag definida como `false` no config.toml permaneça desativada; as variáveis `KIMI_CODE_EXPERIMENTAL_<NAME>` específicas de cada recurso ainda substituem ambas.
+- Corrigir vários problemas conhecidos e realizar diversos aprimoramentos. Consulte o [changelog no GitHub](https://github.com/MoonshotAI/kimi-code/blob/main/apps/kimi-code/CHANGELOG.md) para ver entradas mais técnicas.
+
 ## 0.39.1 (2026-08-28)
 
-### Bug Fixes
+### Correções de bugs
 
-- web: Fix switching the permission mode in one session changing it for every session; the permission mode is now scoped per session.
-- web: Fix signed-in users without a usable model being wrongly asked to sign in (and getting stuck there on web); the send gate now offers picking or configuring a model instead.
-- web: Fix the first IME (or keyboard) character being silently swallowed after clicking the composer placeholder.
-- web: Fix attachments in a newly created session still showing as uploading after the upload has finished.
-- Fix several known issues and make various refinements. See the [changelog on GitHub](https://github.com/MoonshotAI/kimi-code/blob/main/apps/kimi-code/CHANGELOG.md) for more technical entries.
+- web: Corrigir a alteração do modo de permissão em uma sessão que modificava o modo de todas as sessões; o modo de permissão agora é específico para cada sessão.
+- web: Corrigir usuários conectados sem um modelo utilizável que eram solicitados incorretamente a fazer login (e ficavam presos nessa tela na web); a etapa de envio agora oferece a opção de selecionar ou configurar um modelo.
+- web: Corrigir o primeiro caractere do IME (ou teclado) que era silenciosamente perdido após clicar no espaço reservado do compositor.
+- web: Corrigir anexos em uma sessão recém-criada que continuavam sendo exibidos como se estivessem sendo enviados após o upload ter sido concluído.
+- Corrigir vários problemas conhecidos e realizar diversos aprimoramentos. Consulte o [changelog no GitHub](https://github.com/MoonshotAI/kimi-code/blob/main/apps/kimi-code/CHANGELOG.md) para ver entradas mais técnicas.
 
 ## 0.39.0 (2026-08-27)
 
-### Features
+### Funcionalidades
 
-- Add Remote Control as an experimental feature for accessing a local web session remotely. Enable it with `KIMI_CODE_EXPERIMENTAL_REMOTE_CONTROL=1`, then run `kimi rc`, `kimi web --remote-control`, or `/remote-control` to start it.
-- Add experimental tower mode for multi-agent orchestration; set `KIMI_CODE_EXPERIMENTAL_TOWER=1`, then run `/tower on` and `/tower <objective>` to start.
-- Add an optional `fork` parameter to subagent and swarm tools that starts the subagent with a snapshot of the calling agent's conversation history; set `KIMI_CODE_EXPERIMENTAL_SUBAGENT_FORK=1` or `subagent_fork = true` under `[experimental]` in config.toml to enable it.
-- web: Allow moving a running foreground Bash command or subagent to the background via the "Move to background" button on the running card.
-- web: Add a flat/by-workspace tab to the mobile session list.
-- Add the Tencent CloudBase plugin to the curated marketplace.
-- Add a dedicated `[swarm] timeout_ms` config option (or the `KIMI_CODE_SWARM_TIMEOUT_MS` env var) for AgentSwarm subagent timeouts, which no longer follow `[subagent] timeout_ms`.
+- Adicionar o Remote Control como um recurso experimental para acessar remotamente uma sessão web local. Habilite-o com `KIMI_CODE_EXPERIMENTAL_REMOTE_CONTROL=1` e, em seguida, execute `kimi rc`, `kimi web --remote-control` ou `/remote-control` para iniciá-lo.
+- Adicionar o modo tower experimental para orquestração de múltiplos agentes; defina `KIMI_CODE_EXPERIMENTAL_TOWER=1` e, em seguida, execute `/tower on` e `/tower <objective>` para iniciá-lo.
+- Adicionar um parâmetro opcional `fork` às ferramentas subagent e swarm, que inicia o subagente com um instantâneo do histórico de conversas do agente que o chamou; defina `KIMI_CODE_EXPERIMENTAL_SUBAGENT_FORK=1` ou `subagent_fork = true` em `[experimental]` no config.toml para habilitá-lo.
+- web: Permitir mover um comando Bash ou subagente em primeiro plano em execução para segundo plano por meio do botão "Move to background" no cartão em execução.
+- web: Adicionar uma aba flat/por workspace à lista de sessões para dispositivos móveis.
+- Adicionar o plugin Tencent CloudBase ao marketplace selecionado.
+- Adicionar uma opção de configuração dedicada `[swarm] timeout_ms` (ou a variável de ambiente `KIMI_CODE_SWARM_TIMEOUT_MS`) para os tempos limite dos subagentes do AgentSwarm, que não seguem mais `[subagent] timeout_ms`.
 
-### Polish
+### Aprimoramentos
 
-- web: Revamp the right sidebar as a multi-tab panel.
-- web: Improve composer interaction, including the presentation of file, folder, and media attachments.
-- web: Improve mobile UI styling.
+- web: Reformular a barra lateral direita como um painel com várias abas.
+- web: Melhorar a interação do compositor, incluindo a apresentação de anexos de arquivos, pastas e mídia.
+- web: Melhorar o estilo da interface de usuário para dispositivos móveis.
 
-### Bug Fixes
+### Correções de bugs
 
-- Fix file tools and shell working directories failing to resolve Git Bash paths such as /c/Users or /tmp on Windows.
-- Fix several known issues and make various refinements. See the [changelog on GitHub](https://github.com/MoonshotAI/kimi-code/blob/main/apps/kimi-code/CHANGELOG.md) for more technical entries.
+- Corrigir as ferramentas de arquivos e os diretórios de trabalho do shell que falhavam ao resolver caminhos do Git Bash, como /c/Users ou /tmp no Windows.
+- Corrigir vários problemas conhecidos e realizar diversos aprimoramentos. Consulte o [changelog no GitHub](https://github.com/MoonshotAI/kimi-code/blob/main/apps/kimi-code/CHANGELOG.md) para ver entradas mais técnicas.
 
 ## 0.38.0 (2026-08-20)
 
-### Features
+### Funcionalidades
 
-- Support two OAuth login methods — kimi.ai and kimi.com.
-- Add the WaitFor tool: the agent can now wait for a background task to finish within the current turn instead of ending the turn and being re-invoked.
-- Add 13 data sources to the official Kimi Datasource plugin — Chinese government data (NDA/NBS) and standards (GB/HB/DB/TT), eight international organization datasets (WHO, FAO, UNSD, ECB, Eurostat, UNICEF, OECD, FRED), Xinhua Finance, and Caixin. Update the plugin from the Official tab in /plugins.
-- web: Add a Pin action to the chat header more-menu.
+- Suportar dois métodos de login OAuth — kimi.ai e kimi.com.
+- Adicionar a ferramenta WaitFor: o agente agora pode aguardar a conclusão de uma tarefa em segundo plano durante o turno atual, em vez de encerrar o turno e ser reinvocado.
+- Adicionar 13 fontes de dados ao plugin oficial Kimi Datasource — dados do governo chinês (NDA/NBS) e padrões (GB/HB/DB/TT), oito conjuntos de dados de organizações internacionais (WHO, FAO, UNSD, ECB, Eurostat, UNICEF, OECD, FRED), Xinhua Finance e Caixin. Atualize o plugin pela aba Official em /plugins.
+- web: Adicionar uma ação Pin ao menu de mais opções do cabeçalho do chat.
 
-### Polish
+### Aprimoramentos
 
-- Edit and Write now require reading an existing file before modifying it.
-<!-- - Sub-agents no longer spawn their own sub-agents by default; custom agent profiles can still allow it explicitly. -->
-- Collapse long `!` shell command output instead of flooding the transcript. Press ctrl+o to expand or collapse it together with tool output.
+- Edit e Write agora exigem a leitura de um arquivo existente antes de modificá-lo.
+<!-- - Os subagentes não iniciam mais seus próprios subagentes por padrão; perfis de agentes personalizados ainda podem permitir isso explicitamente. -->
+- Recolher a saída longa de comandos shell `!` em vez de inundar o histórico. Pressione ctrl+o para expandir ou recolher a saída junto com a saída da ferramenta.
 
-### Bug Fixes
+### Correções de bugs
 
-- Fix config.toml entries being lost when the file had a syntax error or was edited outside the app.
-- Fix several known issues and make various refinements. See the [changelog on GitHub](https://github.com/MoonshotAI/kimi-code/blob/main/apps/kimi-code/CHANGELOG.md) for more technical entries.
+- Corrigir entradas do config.toml que eram perdidas quando o arquivo apresentava um erro de sintaxe ou era editado fora do aplicativo.
+- Corrigir vários problemas conhecidos e realizar diversos aprimoramentos. Consulte o [changelog no GitHub](https://github.com/MoonshotAI/kimi-code/blob/main/apps/kimi-code/CHANGELOG.md) para ver entradas mais técnicas.
 
 ## 0.37.2 (2026-08-19)
 
-### Polish
+### Aprimoramentos
 
-- web: Settings gains a Lab tab with a new multi-tab sidebar toggle; when enabled, the sidebar shows the Open / Done / Workspaces tabs.
-- Make several refinements and internal improvements. See the [changelog on GitHub](https://github.com/MoonshotAI/kimi-code/blob/main/apps/kimi-code/CHANGELOG.md) for more technical entries.
+- web: As Configurações agora possuem uma aba Lab com uma nova opção de alternância da barra lateral com várias abas; quando habilitada, a barra lateral exibe as abas Open / Done / Workspaces.
+- Realizar diversos aprimoramentos e melhorias internas. Consulte o [changelog no GitHub](https://github.com/MoonshotAI/kimi-code/blob/main/apps/kimi-code/CHANGELOG.md) para ver entradas mais técnicas.
 
 ## 0.37.1 (2026-08-18)
 
-### Bug Fixes
+### Correções de bugs
 
-- Fix pasted images and videos failing to reach the model.
+- Corrigir imagens e vídeos colados que não conseguiam chegar ao modelo.
 
 ## 0.37.0 (2026-08-18)
 
-### Features
+### Funcionalidades
 
-- Activate multiple skills in a single prompt. Type `/` after whitespace to insert a skill token.
-- The Windows native (single-binary) CLI now supports automatic updates.
-- web: The sidebar gains Open / Done / Workspaces tabs, and sessions can be marked as done.
-- web: Add a session management page.
+- Ativar várias skills em um único prompt. Digite `/` após um espaço em branco para inserir um token de skill.
+- A CLI nativa do Windows (binário único) agora oferece suporte a atualizações automáticas.
+- web: A barra lateral ganha as abas Open / Done / Workspaces, e as sessões podem ser marcadas como concluídas.
+- web: Adicionar uma página de gerenciamento de sessões.
 
-### Polish
+### Aprimoramentos
 
-- Queue slash skill commands entered while the agent is busy instead of rejecting them.
-- web: @-mentioned files, folders, and skills in chat messages now render as icon pills.
-- web: The browser tab title now shows the current workspace directory name.
-- web: The search dialog now finds workspaces too, and picking a workspace or session result expands the sidebar and scrolls the item into view.
-- web: Renamed the Subagent panel to "Background Agent".
-- Warn when a typed `/goal` objective exceeds the 4000-character limit, and keep the input if it is rejected.
+- Colocar na fila os comandos de skills iniciados com `/` enquanto o agente estiver ocupado, em vez de rejeitá-los.
+- web: Arquivos, pastas e skills mencionados com @ nas mensagens do chat agora são exibidos como ícones em formato de pílula.
+- web: O título da aba do navegador agora exibe o nome do diretório do workspace atual.
+- web: A caixa de diálogo de pesquisa agora também encontra workspaces, e ao selecionar um resultado de workspace ou sessão, a barra lateral é expandida e o item é colocado em evidência por meio da rolagem.
+- web: Renomear o painel Subagent para "Background Agent".
+- Avisar quando um objetivo `/goal` digitado ultrapassar o limite de 4.000 caracteres e manter a entrada caso ela seja rejeitada.
 
-### Bug Fixes
+### Correções de bugs
 
-- Fix Gemini tool-calling sessions failing on follow-up requests.
-- web: Fix Ctrl+K in the composer opening session search on macOS — session search now only answers to Cmd+K.
-- web: Fix the Background Agent panel showing incorrect task counts and statuses.
-- web: Fix pasting a copied folder into the composer failing the upload with a connection error — folders are now skipped instead.
-- Fix several known issues and make various refinements. See the [changelog on GitHub](https://github.com/MoonshotAI/kimi-code/blob/main/apps/kimi-code/CHANGELOG.md) for more technical entries.
+- Corrigir sessões de chamadas de ferramentas do Gemini que falhavam em solicitações subsequentes.
+- web: Corrigir o Ctrl+K no compositor que abria a pesquisa de sessões no macOS — a pesquisa de sessões agora responde somente ao Cmd+K.
+- web: Corrigir o painel Background Agent que exibia contagens e status de tarefas incorretos.
+- web: Corrigir a falha ao colar uma pasta copiada no compositor, que causava um erro de conexão durante o upload — as pastas agora são ignoradas.
+- Corrigir vários problemas conhecidos e realizar diversos aprimoramentos. Consulte o [changelog no GitHub](https://github.com/MoonshotAI/kimi-code/blob/main/apps/kimi-code/CHANGELOG.md) para ver entradas mais técnicas.
 
 ## 0.36.1 (2026-08-14)
 
