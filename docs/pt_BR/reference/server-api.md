@@ -158,240 +158,243 @@ Em caso de sucesso, `data` é `{ "ok": true }`.
 
 #### `GET /api/v1/meta`
 
-Returns this instance's identity and capability map. Most fields are frozen at boot; `experimental_flags` and `features` are resolved per request, so a flag flip or a failed feature shows up in the next response.
+Retorna a identidade desta instância e o mapa de capacidades. A maioria dos campos é congelada na inicialização; `experimental_flags` e `features` são resolvidos por requisição, de modo que a alteração de uma flag ou uma feature que falhou aparece na próxima resposta.
 
-On success, `data` carries:
+Em caso de sucesso, `data` carrega:
 
-| Field | Type | Description |
+| Campo | Tipo | Descrição |
 | --- | --- | --- |
-| `server_version` | string | Server version |
-| `capabilities` | object | Capability map — `websocket`, `file_upload`, `fs_query`, `mcp`, `tasks`, `terminal`, all always `true` |
-| `server_id` | string | Unique id of this server instance |
-| `started_at` | string | Boot time, ISO 8601 |
-| `open_in_apps` | array | Host apps usable as `open-in` targets (`finder` / `cursor` / `vscode` / `iterm` / `terminal`); currently always empty |
-| `dangerous_bypass_auth` | boolean | Whether the server was started with `--dangerous-bypass-auth` (clients may skip the token prompt) |
-| `backend` | string | Engine backend, `v1` or `v2`; always `v2` for this server |
-| `web_title` | string | Custom browser tab title from `--web-title`; omitted when unset |
-| `experimental_flags` | object | Experimental flag id → enabled, resolved at request time |
-| `features` | array | Engine features as `{ name, state, meta }`; `state` is `Pending` / `Activating` / `Active` / `Unloading` / `Failed` |
+| `server_version` | string | Versão do servidor |
+| `capabilities` | object | Mapa de capacidades — `websocket`, `file_upload`, `fs_query`, `mcp`, `tasks`, `terminal`, todos sempre `true` |
+| `server_id` | string | Id único desta instância do servidor |
+| `started_at` | string | Tempo de inicialização, ISO 8601 |
+| `open_in_apps` | array | Aplicativos do host utilizáveis como alvos `open-in` (`finder` / `cursor` / `vscode` / `iterm` / `terminal`); atualmente sempre vazio |
+| `dangerous_bypass_auth` | boolean | Se o servidor foi iniciado com `--dangerous-bypass-auth` (clientes podem pular o prompt de token) |
+| `backend` | string | Backend da engine, `v1` ou `v2`; sempre `v2` para este servidor |
+| `web_title` | string | Título personalizado da aba do navegador a partir de `--web-title`; omitido quando não definido |
+| `experimental_flags` | object | Id da flag experimental → habilitado, resolvido no momento da requisição |
+| `features` | array | Features da engine como `{ name, state, meta }`; `state` é `Pending` / `Activating` / `Active` / `Unloading` / `Failed` |
 
 #### `POST /api/v1/shutdown`
 
-Asks the server to shut down gracefully. The reply is sent first and the shutdown runs immediately after, so the caller can trust the response it received. The route is mounted only on loopback binds — on a non-loopback bind it is not registered at all (requests hit a 404) unless the server was started with `--allow-remote-shutdown`.
+Solicita que o servidor seja desligado graciosamente. A resposta é enviada primeiro e o desligamento ocorre imediatamente depois, para que o chamador possa confiar na resposta que recebeu. A rota é montada apenas em binds de loopback — em um bind não-loopback ela sequer é registrada (as requisições resultam em um 404) a menos que o servidor tenha sido iniciado com `--allow-remote-shutdown`.
 
-On success, `data` is `{ "ok": true }`.
+Em caso de sucesso, `data` é `{ "ok": true }`.
 
-### Login and usage
+### Login e uso
 
-These endpoints drive the managed Kimi OAuth login lifecycle and expose account-level information. The managed provider is named `managed:kimi-code`; the optional `provider` parameter on every endpoint below defaults to it.
+Estes endpoints controlam o ciclo de vida do login OAuth gerenciado do Kimi e expõem informações em nível de conta. O provedor gerenciado é nomeado `managed:kimi-code`; o parâmetro opcional `provider` em todos os endpoints abaixo tem ele como padrão.
 
-| Method and path | Description |
+| Método e caminho | Descrição |
 | --- | --- |
-| `GET /api/v1/auth` | Auth snapshot |
-| `POST /api/v1/oauth/login` | Start the OAuth device-code login flow |
-| `GET /api/v1/oauth/login` | Poll the login flow state |
-| `DELETE /api/v1/oauth/login` | Cancel a pending login flow |
-| `POST /api/v1/oauth/logout` | Log out the managed provider |
-| `GET /api/v1/oauth/usage` | Plan usage and limits |
-| `GET /api/v1/oauth/userinfo` | Account profile |
-| `GET /api/v1/oauth/region` | Resolve the client region (`mainland-cn` / `global`) |
+| `GET /api/v1/auth` | Snapshot de autenticação |
+| `POST /api/v1/oauth/login` | Inicia o fluxo de login de device-code do OAuth |
+| `GET /api/v1/oauth/login` | Faz polling do estado do fluxo de login |
+| `DELETE /api/v1/oauth/login` | Cancela um fluxo de login pendente |
+| `POST /api/v1/oauth/logout` | Faz logout do provedor gerenciado |
+| `GET /api/v1/oauth/usage` | Uso e limites do plano |
+| `GET /api/v1/oauth/userinfo` | Perfil da conta |
+| `GET /api/v1/oauth/region` | Resolve a região do cliente (`mainland-cn` / `global`) |
 
-#### `GET /api/v1/auth`
-
-Auth snapshot: whether the default model resolves to a usable provider configuration, plus the managed provider's login state. `models_ready` is `true` when the global `default_model` alias exists in the model table and resolves to a configured provider — including providerless flat models carrying their own `base_url` and models injected through `KIMI_MODEL_*` environment variables. It does not verify credentials, so a prompt can still fail afterwards with `40111` / `40112`.
+l` and models injected through `KIMI_MODEL_*` environment variables. It does not verify credentials, so a prompt can still fail afterwards with `40111` / `40112`.
 
 On success, `data` carries `models_ready` (boolean), `providers_count` (number of configured providers), and `managed_provider` (`null`, or `{ name, status }` with `status` one of `authenticated` / `expired` / `revoked` / `unauthenticated`). The global default model alias itself is read from `GET /api/v1/config` (`default_model`), not from this endpoint.
 
+#### `GET /api/v1/auth`
+
+Snapshot de autenticação: se o modelo padrão resolve para uma configuração de provedor utilizável, além do estado de login do provedor gerenciado. `models_ready` é `true` quando o alias global `default_model` existe na tabela de modelos e resolve para um provedor configurado — incluindo modelos planos sem provedor (providerless flat models) que carregam sua própria `base_url` e modelos injetados através das variáveis de ambiente `KIMI_MODEL_*`. Ele não verifica credenciais, portanto um prompt ainda pode falhar posteriormente com `40111` / `40112`.
+
+Em caso de sucesso, `data` carrega `models_ready` (booleano), `providers_count` (número de provedores configurados) e `managed_provider` (`null`, ou `{ name, status }` com `status` sendo um de `authenticated` / `expired` / `revoked` / `unauthenticated`). O próprio alias do modelo padrão global é lido de `GET /api/v1/config` (`default_model`), não deste endpoint.
+
 #### `POST /api/v1/oauth/login`
 
-Starts an OAuth device-code login flow for the managed provider; starting a new flow aborts any pending flow for the same provider. When the account is already authenticated, no user interaction is needed and the response reports `authenticated` immediately.
+Inicia um fluxo de login de device-code do OAuth para o provedor gerenciado; iniciar um novo fluxo aborta qualquer fluxo pendente para o mesmo provedor. Quando a conta já está autenticada, nenhuma interação do usuário é necessária e a resposta relata `authenticated` imediatamente.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `provider` | body | string | Managed provider name. Default `managed:kimi-code` |
-| `region` | body | string | `mainland-cn` or `global`; overrides the region resolution described under `GET /api/v1/oauth/region` for this flow |
+| `provider` | body | string | Nome do provedor gerenciado. Padrão `managed:kimi-code` |
+| `region` | body | string | `mainland-cn` ou `global`; substitui a resolução de região descrita em `GET /api/v1/oauth/region` para este fluxo |
 
-On success, `data` has one of two shapes. A pending flow — `{ flow_id, provider, status: "pending", verification_uri, verification_uri_complete, user_code, expires_in, interval, expires_at }`: open `verification_uri_complete` (or `verification_uri` and enter `user_code`), then poll `GET /api/v1/oauth/login` every `interval` seconds until the flow resolves or `expires_at` passes (`expires_in` is the same deadline in seconds). The already-authenticated fast path — `{ flow_id, provider, status: "authenticated" }`.
+Em caso de sucesso, `data` tem um de dois formatos. Um fluxo pendente — `{ flow_id, provider, status: "pending", verification_uri, verification_uri_complete, user_code, expires_in, interval, expires_at }`: abra `verification_uri_complete` (ou `verification_uri` e insira o `user_code`), em seguida, faça polling de `GET /api/v1/oauth/login` a cada `interval` segundos até que o fluxo seja resolvido ou `expires_at` seja ultrapassado (`expires_in` é o mesmo prazo em segundos). O caminho rápido já autenticado — `{ flow_id, provider, status: "authenticated" }`.
 
 #### `GET /api/v1/oauth/login`
 
-Polls the login flow state for a provider. Returns `null` when no flow has been started.
+Faz polling do estado do fluxo de login para um provedor. Retorna `null` quando nenhum fluxo foi iniciado.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `provider` | query | string | Managed provider name. Default `managed:kimi-code` |
+| `provider` | query | string | Nome do provedor gerenciado. Padrão `managed:kimi-code` |
 
-On success, `data` is `null` or a flow snapshot: `{ flow_id, provider, status, verification_uri, verification_uri_complete, user_code, expires_in, expires_at, interval }`, where `status` is `pending` / `authenticated` / `denied` / `expired` / `cancelled`. Once the flow leaves `pending`, `resolved_at` records when it reached its terminal state and `error_message` describes a failed flow.
+Em caso de sucesso, `data` é `null` ou um snapshot do fluxo: `{ flow_id, provider, status, verification_uri, verification_uri_complete, user_code, expires_in, expires_at, interval }`, onde `status` é `pending` / `authenticated` / `denied` / `expired` / `cancelled`. Uma vez que o fluxo deixa o estado `pending`, `resolved_at` registra quando ele atingiu seu estado terminal e `error_message` descreve um fluxo que falhou.
 
 #### `DELETE /api/v1/oauth/login`
 
-Cancels the pending login flow for a provider. When no flow is pending, the call is a no-op that reports the last known state.
+Cancela o fluxo de login pendente para um provedor. Quando não há fluxo pendente, a chamada é um no-op que relata o último estado conhecido.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `provider` | query | string | Managed provider name. Default `managed:kimi-code` |
+| `provider` | query | string | Nome do provedor gerenciado. Padrão `managed:kimi-code` |
 
-On success, `data` is `{ cancelled, status }`: `cancelled` is `true` only when a `pending` flow was actually aborted, and `status` is the flow state after the call.
+Em caso de sucesso, `data` é `{ cancelled, status }`: `cancelled` é `true` apenas quando um fluxo `pending` foi efetivamente abortado, e `status` é o estado do fluxo após a chamada.
 
 #### `POST /api/v1/oauth/logout`
 
-Logs out the managed provider: discards the stored OAuth credential, aborts any pending login flow, and removes the managed provider from the configuration. OAuth-managed providers reject manual edit and delete (see `PUT` / `DELETE /api/v1/providers/{provider_id}` below), so log out first to remove one.
+Faz logout do provedor gerenciado: descarta a credencial OAuth armazenada, aborta qualquer fluxo de login pendente e remove o provedor gerenciado da configuração. Provedores gerenciados via OAuth rejeitam edição e exclusão manuais (veja `PUT` / `DELETE /api/v1/providers/{provider_id}` abaixo), então faça logout primeiro para remover um.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `provider` | body | string | Managed provider name. Default `managed:kimi-code` |
+| `provider` | body | string | Nome do provedor gerenciado. Padrão `managed:kimi-code` |
 
-On success, `data` is `{ logged_out: true, provider }`.
+Em caso de sucesso, `data` é `{ logged_out: true, provider }`.
 
 #### `GET /api/v1/oauth/usage`
 
-Plan usage and limits of the managed account, fetched live from the account service. An upstream failure does not fail the envelope — it comes back in-band with `kind: "error"`.
+Uso e limites do plano da conta gerenciada, buscados em tempo real do serviço de contas. Uma falha de upstream não causa falha no envelope — ela retorna na mesma banda (in-band) com `kind: "error"`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `provider` | query | string | Managed provider name. Default `managed:kimi-code` |
+| `provider` | query | string | Nome do provedor gerenciado. Padrão `managed:kimi-code` |
 
-On success, `data` is `{ kind: "ok", summary, limits, extra_usage }` or `{ kind: "error", message, status? }`, where `status` is the upstream HTTP status when one exists. In the `ok` shape, `summary` (nullable) is the primary quota row and `limits` lists every quota window; a row is `{ name?, window?, used, limit, reset_at? }` with `window` as `{ duration, unit }`, `unit` one of `minute` / `hour` / `day` / `week`. `extra_usage` (nullable) is the pay-as-you-go wallet: `{ balance_cents, total_cents, monthly_charge_limit_enabled, monthly_charge_limit_cents, monthly_used_cents, currency }`.
+Em caso de sucesso, `data` é `{ kind: "ok", summary, limits, extra_usage }` ou `{ kind: "error", message, status? }`, onde `status` é o status HTTP do upstream quando existe um. No formato `ok`, `summary` (anulável/nullable) é a linha de cota principal e `limits` lista todas as janelas de cota; uma linha é `{ name?, window?, used, limit, reset_at? }` com `window` sendo `{ duration, unit }`, `unit` um de `minute` / `hour` / `day` / `week`. `extra_usage` (anulável/nullable) é a carteira pay-as-you-go: `{ balance_cents, total_cents, monthly_charge_limit_enabled, monthly_charge_limit_cents, monthly_used_cents, currency }`.
 
 #### `GET /api/v1/oauth/userinfo`
 
-Profile of the managed account, with the same in-band `kind: "error"` convention as `GET /api/v1/oauth/usage`.
+Perfil da conta gerenciada, com a mesma convenção in-band `kind: "error"` de `GET /api/v1/oauth/usage`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `provider` | query | string | Managed provider name. Default `managed:kimi-code` |
+| `provider` | query | string | Nome do provedor gerenciado. Padrão `managed:kimi-code` |
 
-On success, `data` is `{ kind: "ok", userInfo }` or `{ kind: "error", message, status? }`. `userInfo` always carries `userId`, `nickname`, `status`, `region`, `userLevel`, `userLevelName`, `domain`, and `domainName`, and may add `globalId`, `bio`, `avatar`, `username`, `email`, `phone` (`{ countryCode, number }`), `createdTime`, and `lastLoginTime`.
+Em caso de sucesso, `data` é `{ kind: "ok", userInfo }` ou `{ kind: "error", message, status? }`. `userInfo` carrega sempre `userId`, `nickname`, `status`, `region`, `userLevel`, `userLevelName`, `domain`, e `domainName`, e pode adicionar `globalId`, `bio`, `avatar`, `username`, `email`, `phone` (`{ countryCode, number }`), `createdTime`, e `lastLoginTime`.
 
 #### `GET /api/v1/oauth/region`
 
-Resolves which Kimi region this client belongs to. The answer is derived locally, not probed over the network: an OAuth host pinned by environment or config wins first, then the configured OAuth key, then the region marker file in the home directory; the default is `mainland-cn`.
+Resolve a qual região Kimi este cliente pertence. A resposta é derivada localmente, não sondada pela rede: um host OAuth fixado pelo ambiente ou pela configuração prevalece primeiro, em seguida a chave OAuth configurada, depois o arquivo marcador de região no diretório home; o padrão é `mainland-cn`.
 
-On success, `data` is `{ region }` with `region` one of `mainland-cn` / `global`.
+Em caso de sucesso, `data` é `{ region }` com `region` sendo uma de `mainland-cn` / `global`.
 
-### Config
+### Configuração
 
-| Method and path | Description |
+| Método e caminho | Descrição |
 | --- | --- |
-| `GET /api/v1/config` | Read the global config (secret fields redacted) |
-| `POST /api/v1/config` | Merge-patch the config; broadcasts `event.config.changed` |
+| `GET /api/v1/config` | Ler a configuração global (campos sensíveis omitidos) |
+| `POST /api/v1/config` | Fazer merge-patch da configuração; transmite `event.config.changed` |
 
 #### `GET /api/v1/config`
 
-Returns the resolved global configuration — the effective result of `config.toml` plus overlays. Secrets are redacted: each provider reports only `has_api_key`, never the stored key.
+Retorna a configuração global resolvida — o resultado efetivo de `config.toml` mais sobreposições. Segredos são omitidos (redacted): cada provedor relata apenas `has_api_key`, nunca a chave armazenada.
 
-On success, `data` is the config object; its fields mirror the top-level domains documented under [Top-level fields](../configuration/config-files.md#top-level-fields):
+Em caso de sucesso, `data` é o objeto de configuração; seus campos espelham os domínios de nível superior documentados em [Campos de nível superior](../configuration/config-files.md#top-level-fields):
 
-| Field | Type | Description |
+| Campo | Tipo | Descrição |
 | --- | --- | --- |
-| `providers` | object | Map of provider id → `{ type, base_url?, default_model?, has_api_key }` |
-| `default_provider` | string | Global default provider id |
-| `default_model` | string | Global default model alias |
-| `models` | object | Map of model alias → model record |
-| `thinking` | object | Default parameters for Thinking mode |
-| `plan_mode` | boolean | Plan mode flag |
-| `yolo` | boolean | Derived: `true` when `default_permission_mode` is `yolo` |
-| `default_permission_mode` | string | Default permission mode for new sessions |
-| `default_plan_mode` | boolean | Whether new sessions start in Plan mode |
-| `permission` | object | Initial permission rules |
-| `hooks` | array | Lifecycle hooks |
-| `services` | object | Built-in external service configuration |
-| `merge_all_available_skills` | boolean | Whether to merge Agent Skills from all available directories |
-| `extra_skill_dirs` | array | Extra skill search directories |
-| `loop_control` | object | Agent loop control parameters |
-| `background` | object | Background task runtime parameters |
-| `subagent` | object | Subagent configuration |
-| `secondary_model` | object | Secondary model pool for subagents |
-| `experimental` | object | Experimental flag id → enabled |
-| `telemetry` | boolean | Whether anonymous telemetry is enabled |
-| `raw` | object | Raw parsed `config.toml` content, unmodeled fields included |
+| `providers` | object | Mapa de id do provedor → `{ type, base_url?, default_model?, has_api_key }` |
+| `default_provider` | string | Id do provedor padrão global |
+| `default_model` | string | Alias do modelo padrão global |
+| `models` | object | Mapa de alias de modelo → registro de modelo |
+| `thinking` | object | Parâmetros padrão para o modo Thinking |
+| `plan_mode` | boolean | Flag do modo Plan |
+| `yolo` | boolean | Derivado: `true` quando `default_permission_mode` é `yolo` |
+| `default_permission_mode` | string | Modo de permissão padrão para novas sessões |
+| `default_plan_mode` | boolean | Se novas sessões iniciam no modo Plan |
+| `permission` | object | Regras iniciais de permissão |
+| `hooks` | array | Hooks de ciclo de vida |
+| `services` | object | Configuração de serviço externo embutido |
+| `merge_all_available_skills` | boolean | Se deve mesclar Agent Skills de todos os diretórios disponíveis |
+| `extra_skill_dirs` | array | Diretórios extras de busca de skills |
+| `loop_control` | object | Parâmetros de controle de loop do agente |
+| `background` | object | Parâmetros de runtime de tarefas em background |
+| `subagent` | object | Configuração de subagente |
+| `secondary_model` | object | Pool de modelos secundários para subagentes |
+| `experimental` | object | Id de flag experimental → habilitado |
+| `telemetry` | boolean | Se a telemetria anônima está habilitada |
+| `raw` | object | Conteúdo bruto analisado de `config.toml`, campos não modelados incluídos |
 
 #### `POST /api/v1/config`
 
-Merge-patches the global configuration: each top-level domain in the body is deep-merged into that domain, and domains absent from the body are left untouched. Setting `yolo` to `true` is shorthand for `default_permission_mode: "yolo"`; a rejected patch (invalid value or persistence failure) returns `40001` with the underlying message.
+Faz merge-patch da configuração global: cada domínio de nível superior no corpo sofre um deep-merge nesse domínio, e os domínios ausentes no corpo são deixados intactos. Definir `yolo` como `true` é um atalho para `default_permission_mode: "yolo"`; um patch rejeitado (valor inválido ou falha de persistência) retorna `40001` com a mensagem subjacente.
 
-Every config change — a successful update through this endpoint, an external edit of `config.toml`, or a server-side write such as an OAuth login refresh — is broadcast as the global `event.config.changed` event. Changes inside a short window are merged into one event carrying the affected domain names in `changedFields` (camelCase config domains, for example `defaultModel`) and the full current config projection in `config` (same shape as the `GET /api/v1/config` response).
+Toda mudança de configuração — uma atualização bem-sucedida através deste endpoint, uma edição externa do `config.toml`, ou uma gravação no lado do servidor como uma atualização de login OAuth — é transmitida como o evento global `event.config.changed`. Mudanças dentro de uma janela curta são mescladas em um único evento carregando os nomes dos domínios afetados em `changedFields` (domínios de configuração em camelCase, por exemplo `defaultModel`) e a projeção completa da configuração atual em `config` (mesmo formato da resposta de `GET /api/v1/config`).
 
-The body is a partial config object — any subset of the response domains above except `raw`, all optional:
+O corpo é um objeto de configuração parcial — qualquer subconjunto dos domínios de resposta acima exceto `raw`, todos opcionais:
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `providers` | body | object | Map of provider id → provider table |
-| `default_provider` | body | string | Global default provider id |
-| `default_model` | body | string | Global default model alias |
-| `models` | body | object | Map of model alias → model record |
-| `thinking` | body | object | Default parameters for Thinking mode |
-| `plan_mode` | body | boolean | Plan mode flag |
-| `yolo` | body | boolean | `true` maps to `default_permission_mode: "yolo"`; `false` is ignored |
+| `providers` | body | object | Mapa de id do provedor → tabela do provedor |
+| `default_provider` | body | string | Id do provedor padrão global |
+| `default_model` | body | string | Alias do modelo padrão global |
+| `models` | body | object | Mapa de alias de modelo → registro de modelo |
+| `thinking` | body | object | Parâmetros padrão para o modo Thinking |
+| `plan_mode` | body | boolean | Flag do modo Plan |
+| `yolo` | body | boolean | `true` mapeia para `default_permission_mode: "yolo"`; `false` é ignorado |
 | `default_permission_mode` | body | string | `manual` / `yolo` / `auto` |
-| `default_plan_mode` | body | boolean | Whether new sessions start in Plan mode |
-| `permission` | body | object | Initial permission rules |
-| `hooks` | body | array | Lifecycle hooks |
-| `services` | body | object | Built-in external service configuration |
-| `merge_all_available_skills` | body | boolean | Whether to merge Agent Skills from all available directories |
-| `extra_skill_dirs` | body | array | Extra skill search directories |
-| `loop_control` | body | object | Agent loop control parameters |
-| `background` | body | object | Background task runtime parameters |
-| `subagent` | body | object | Subagent configuration |
-| `secondary_model` | body | object | Secondary model pool for subagents |
-| `experimental` | body | object | Experimental flag id → enabled |
-| `telemetry` | body | boolean | Whether anonymous telemetry is enabled |
+| `default_plan_mode` | body | boolean | Se novas sessões iniciam no modo Plan |
+| `permission` | body | object | Regras iniciais de permissão |
+| `hooks` | body | array | Hooks de ciclo de vida |
+| `services` | body | object | Configuração de serviço externo embutido |
+| `merge_all_available_skills` | body | boolean | Se deve mesclar Agent Skills de todos os diretórios disponíveis |
+| `extra_skill_dirs` | body | array | Diretórios extras de busca de skills |
+| `loop_control` | body | object | Parâmetros de controle de loop do agente |
+| `background` | body | object | Parâmetros de runtime de tarefas em background |
+| `subagent` | body | object | Configuração de subagente |
+| `secondary_model` | body | object | Pool de modelos secundários para subagentes |
+| `experimental` | body | object | Id de flag experimental → habilitado |
+| `telemetry` | body | boolean | Se a telemetria anônima está habilitada |
 
-On success, `data` is the full updated config in the same shape as `GET /api/v1/config`.
+Em caso de sucesso, `data` é a configuração completa atualizada no mesmo formato de `GET /api/v1/config`.
 
-### Models and providers
+### Modelos e provedores
 
-These endpoints manage the two halves of model configuration — the [providers](../configuration/providers.md) table and the model-alias table of `config.toml` — plus a server-proxied models.dev directory for one-shot imports. A model alias id is the exact configured alias key: aliases created through the provider-management endpoints take the form `provider_id/model` (for example `my-provider/kimi-for-coding`), while a bare model-table key such as `turbo` is used as-is; anywhere the API takes a `model_id`, including the global `default_model`, it means this alias id. An unsupported action on a `:{action}` route returns `40001`.
+Estes endpoints gerenciam as duas metades da configuração de modelos — a tabela de [provedores](../configuration/providers.md) e a tabela de aliases de modelos do `config.toml` — além de um diretório models.dev providenciado pelo servidor (server-proxied) para importações de disparo único (one-shot). Um id de alias de modelo é a chave de alias exata configurada: aliases criados através dos endpoints de gerenciamento de provedores assumem a forma `provider_id/model` (por exemplo, `my-provider/kimi-for-coding`), enquanto uma chave simples (bare key) da tabela de modelos como `turbo` é usada como está; onde quer que a API receba um `model_id`, incluindo o `default_model` global, isso significa este id de alias. Uma ação não suportada em uma rota `:{action}` retorna `40001`.
 
-| Method and path | Description |
+| Método e caminho | Descrição |
 | --- | --- |
-| `GET /api/v1/models` | List configured model aliases |
-| `POST /api/v1/models/{model_id}:set_default` | Set the global default model |
-| `GET /api/v1/providers` | List providers |
-| `POST /api/v1/providers` | Create a provider (201) |
-| `GET /api/v1/providers/{provider_id}` | Read a provider (reveals the stored key) |
-| `PUT /api/v1/providers/{provider_id}` | Replace a provider |
-| `DELETE /api/v1/providers/{provider_id}` | Delete a provider (204) |
-| `POST /api/v1/providers/{provider_id}:refresh` | Refresh one provider's model metadata |
-| `POST /api/v1/providers:{action}` | Collection actions: `refresh` / `refresh_oauth` / `import_catalog` / `import_registry` |
-| `GET /api/v1/catalog/providers` | Browse the models.dev directory (server-proxied) |
-| `GET /api/v1/catalog/providers/{catalog_id}` | Read one directory entry |
+| `GET /api/v1/models` | Listar aliases de modelos configurados |
+| `POST /api/v1/models/{model_id}:set_default` | Definir o modelo padrão global |
+| `GET /api/v1/providers` | Listar provedores |
+| `POST /api/v1/providers` | Criar um provedor (201) |
+| `GET /api/v1/providers/{provider_id}` | Ler um provedor (revela a chave armazenada) |
+| `PUT /api/v1/providers/{provider_id}` | Substituir um provedor |
+| `DELETE /api/v1/providers/{provider_id}` | Excluir um provedor (204) |
+| `POST /api/v1/providers/{provider_id}:refresh` | Atualizar os metadados de modelo de um provedor |
+| `POST /api/v1/providers:{action}` | Ações de coleção: `refresh` / `refresh_oauth` / `import_catalog` / `import_registry` |
+| `GET /api/v1/catalog/providers` | Navegar no diretório models.dev (server-proxied) |
+| `GET /api/v1/catalog/providers/{catalog_id}` | Ler uma entrada do diretório |
 
 #### `GET /api/v1/models`
 
-Lists every configured model alias across all providers.
+Lista todos os aliases de modelos configurados em todos os provedores.
 
-On success, `data.items` is an array of `{ provider, model, display_name?, max_context_size, capabilities?, support_efforts?, default_effort? }`: `model` is the alias id (`provider_id/model` for provider-managed aliases, otherwise the bare key), `provider` the owning provider id, `max_context_size` the context window in tokens, and `capabilities` / `support_efforts` / `default_effort` describe capability flags and Thinking-mode effort support.
+Em caso de sucesso, `data.items` é um array de `{ provider, model, display_name?, max_context_size, capabilities?, support_efforts?, default_effort? }`: `model` é o id do alias (`provider_id/model` para aliases gerenciados por provedor, caso contrário, a chave simples), `provider` o id do provedor proprietário, `max_context_size` a janela de contexto em tokens, e `capabilities` / `support_efforts` / `default_effort` descrevem flags de capacidade e suporte de esforço no modo Thinking.
 
 #### `POST /api/v1/models/{model_id}:set_default`
 
-Sets the global `default_model` to an existing alias. `model_id` is the exact configured alias key — for a bare key like `turbo` the call is `POST /api/v1/models/turbo:set_default`; URL-encode the id when it contains `/`, as in `POST /api/v1/models/my-provider%2Fkimi-for-coding:set_default`.
+Define o `default_model` global para um alias existente. `model_id` é a chave exata do alias configurado — para uma chave simples como `turbo` a chamada é `POST /api/v1/models/turbo:set_default`; codifique o id na URL (URL-encode) quando ele contiver `/`, como em `POST /api/v1/models/my-provider%2Fkimi-for-coding:set_default`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `model_id` | path | string | **Required.** The exact configured model alias key; URL-encode it when it contains `/` |
+| `model_id` | path | string | **Obrigatório.** A chave exata do alias de modelo configurado; faça o URL-encode quando contiver `/` |
 
-On success, `data` is `{ default_model, model }` — the alias now in effect and its catalog item (same shape as a `GET /api/v1/models` item).
+Em caso de sucesso, `data` é `{ default_model, model }` — o alias em vigor agora e seu item de catálogo (mesmo formato que um item de `GET /api/v1/models`).
 
-- `40001`: malformed or unsupported action suffix in the path
-- `40413`: no model alias with that id
+- `40001`: sufixo de ação malformado ou não suportado no caminho
+- `40413`: nenhum alias de modelo com esse id
 
 #### `GET /api/v1/providers`
 
-Lists every configured provider with its credential and model-discovery state, without revealing any key. This is the provider item shape referenced by the other provider endpoints.
+Lista todos os provedores configurados com sua credencial e estado de descoberta de modelos, sem revelar nenhuma chave. Este é o formato de item de provedor referenciado pelos outros endpoints de provedor.
 
-On success, `data.items` is an array of:
+Em caso de sucesso, `data.items` é um array de:
 
-| Field | Type | Description |
+| Campo | Tipo | Descrição |
 | --- | --- | --- |
-| `id` | string | Provider id |
-| `type` | string | Wire protocol: `kimi` / `openai` / `openai_responses` / `anthropic` / `google-genai` / `vertexai` |
-| `base_url` | string | API base URL, when set |
-| `default_model` | string | The provider's default model alias, when set |
-| `has_api_key` | boolean | Whether a credential is stored |
-| `status` | string | `connected` when an API key or cached OAuth token exists, `unconfigured` otherwise (`error` is reserved in the schema) |
-| `models` | array | The provider's model alias ids |
-
+| `id` | string | Id do provedor |
+| `type` | string | Protocolo de transporte (wire protocol): `kimi` / `openai` / `openai_responses` / `anthropic` / `google-genai` / `vertexai` |
+| `base_url` | string | URL base da API, quando definida |
+| `default_model` | string | Alias de modelo padrão do provedor, quando definido |
+| `has_api_key` | boolean | Se uma credencial está armazenada |
+| `status` | string | `connected` quando uma chave de API ou token OAuth em cache existe, `unconfigured` caso contrário (`error` é reservado no esquema) |
+| `models` | array | Ids de alias de modelo do provedor |
 #### `POST /api/v1/providers`
 
 Creates a provider and its model aliases in one save; the reply is HTTP 201 with the standard envelope. When no global `default_model` is configured at all (fresh setup), it is seeded with the new provider's `default_model` (or first model); an existing default is never modified.
