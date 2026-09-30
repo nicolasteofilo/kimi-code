@@ -395,208 +395,209 @@ Em caso de sucesso, `data.items` é um array de:
 | `has_api_key` | boolean | Se uma credencial está armazenada |
 | `status` | string | `connected` quando uma chave de API ou token OAuth em cache existe, `unconfigured` caso contrário (`error` é reservado no esquema) |
 | `models` | array | Ids de alias de modelo do provedor |
+
 #### `POST /api/v1/providers`
 
-Creates a provider and its model aliases in one save; the reply is HTTP 201 with the standard envelope. When no global `default_model` is configured at all (fresh setup), it is seeded with the new provider's `default_model` (or first model); an existing default is never modified.
+Cria um provedor e seus aliases de modelo em um único salvamento (save); a resposta é HTTP 201 com o envelope padrão. Quando nenhum `default_model` global está configurado (instalação nova), ele é preenchido com o `default_model` do novo provedor (ou o primeiro modelo); um padrão existente nunca é modificado.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `id` | body | string | **Required.** Provider id — letters, digits, `-`, `_`, and spaces; must start with a letter or digit |
-| `type` | body | string | **Required.** Wire protocol: `kimi` / `openai` / `openai_responses` / `anthropic` / `google-genai` / `vertexai` |
-| `api_key` | body | string | API key, stored in `config.toml` |
-| `base_url` | body | string | API base URL; must not contain an environment variable placeholder (`${...}`) |
-| `default_model` | body | string | The provider's default model; must be one of `models[].model` |
-| `models` | body | array | **Required.** At least one entry, no duplicate `model` values; entry shape below |
+| `id` | body | string | **Obrigatório.** Id do provedor — letras, dígitos, `-`, `_` e espaços; deve começar com uma letra ou dígito |
+| `type` | body | string | **Obrigatório.** Protocolo de transporte (wire protocol): `kimi` / `openai` / `openai_responses` / `anthropic` / `google-genai` / `vertexai` |
+| `api_key` | body | string | Chave da API, armazenada em `config.toml` |
+| `base_url` | body | string | URL base da API; não deve conter um marcador de variável de ambiente (`${...}`) |
+| `default_model` | body | string | O modelo padrão do provedor; deve ser um de `models[].model` |
+| `models` | body | array | **Obrigatório.** Pelo menos uma entrada, sem valores `model` duplicados; formato da entrada abaixo |
 
-Each `models[]` entry declares one alias whose id becomes `id/model`:
+Cada entrada `models[]` declara um alias cujo id se torna `id/model`:
 
-| Field | Type | Description |
+| Campo | Tipo | Descrição |
 | --- | --- | --- |
-| `model` | string | **Required.** Upstream model name |
-| `max_context_size` | integer | **Required.** Context window in tokens, ≥ 1 |
-| `display_name` | string | Display name |
-| `capabilities` | array | Capability flags such as `thinking` or `image_in` |
-| `max_output_size` | integer | Max output tokens, ≥ 1 |
-| `support_efforts` | array | Supported Thinking-mode effort levels |
-| `adaptive_thinking` | boolean | Adaptive thinking toggle |
+| `model` | string | **Obrigatório.** Nome do modelo no upstream |
+| `max_context_size` | integer | **Obrigatório.** Janela de contexto em tokens, ≥ 1 |
+| `display_name` | string | Nome de exibição |
+| `capabilities` | array | Flags de capacidade, como `thinking` ou `image_in` |
+| `max_output_size` | integer | Máximo de tokens de saída, ≥ 1 |
+| `support_efforts` | array | Níveis de esforço suportados no modo Thinking |
+| `adaptive_thinking` | boolean | Alternador (toggle) de pensamento adaptativo |
 
-On success, `data` is the created provider item (same shape as a `GET /api/v1/providers` item).
+Em caso de sucesso, `data` é o item de provedor criado (mesmo formato que um item de `GET /api/v1/providers`).
 
-- `40921`: a provider with this `id` already exists
+- `40921`: já existe um provedor com este `id`
 
 #### `GET /api/v1/providers/{provider_id}`
 
-Reads one provider. Unlike the list route, the response reveals the stored `api_key` when one is set, so a local edit form can prefill — keep this in mind when exposing the port.
+Lê um provedor. Ao contrário da rota de lista, a resposta revela a `api_key` armazenada quando uma está definida, para que um formulário de edição local possa ser pré-preenchido — tenha isso em mente ao expor a porta.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `provider_id` | path | string | **Required.** Provider id |
+| `provider_id` | path | string | **Obrigatório.** Id do provedor |
 
-On success, `data` is the provider item plus `api_key` when a key is stored.
+Em caso de sucesso, `data` é o item do provedor mais a `api_key` quando uma chave está armazenada.
 
-- `40412`: provider not found
+- `40412`: provedor não encontrado
 
 #### `PUT /api/v1/providers/{provider_id}`
 
-Replaces a provider in one save: `type`, `base_url`, and the model list are rewritten, and the provider's aliases are rebuilt from `models` — aliases no longer listed disappear from `config.toml`, while other providers' aliases are untouched. `api_key` is tri-state: omitted keeps the stored key, `""` clears it, any other value replaces it. Beyond the `new_id` rename migration, the global default pointers are never modified.
+Substitui um provedor em um único salvamento: `type`, `base_url` e a lista de modelos são reescritos, e os aliases do provedor são reconstruídos a partir de `models` — aliases que não constam mais na lista desaparecem de `config.toml`, enquanto os aliases de outros provedores permanecem intactos. `api_key` é um estado triplo (tri-state): omitido mantém a chave armazenada, `""` a apaga, qualquer outro valor a substitui. Além da migração de renomeação de `new_id`, os ponteiros padrão globais nunca são modificados.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `provider_id` | path | string | **Required.** Current provider id |
-| `new_id` | body | string | Rename the provider; the providers key, model aliases, `default_provider`, a `default_model` pointing at an old alias, and the subagent secondary-model pool all migrate. Same id rules as `POST /api/v1/providers` |
-| `type` | body | string | **Required.** Wire protocol: `kimi` / `openai` / `openai_responses` / `anthropic` / `google-genai` / `vertexai` |
-| `api_key` | body | string | Tri-state, see above |
-| `base_url` | body | string | API base URL; must not contain an environment variable placeholder (`${...}`) |
-| `default_model` | body | string | The provider's default model; must be one of `models[].model` |
-| `models` | body | array | **Required.** At least one entry, no duplicate `model` values; same entry shape as `POST /api/v1/providers` |
+| `provider_id` | path | string | **Obrigatório.** Id atual do provedor |
+| `new_id` | body | string | Renomeia o provedor; a chave provedores, aliases de modelo, `default_provider`, um `default_model` apontando para um alias antigo e o pool de modelos secundários do subagente migram todos. Mesmas regras de id que `POST /api/v1/providers` |
+| `type` | body | string | **Obrigatório.** Protocolo de transporte (wire protocol): `kimi` / `openai` / `openai_responses` / `anthropic` / `google-genai` / `vertexai` |
+| `api_key` | body | string | Estado triplo (tri-state), veja acima |
+| `base_url` | body | string | URL base da API; não deve conter um marcador de variável de ambiente (`${...}`) |
+| `default_model` | body | string | O modelo padrão do provedor; deve ser um de `models[].model` |
+| `models` | body | array | **Obrigatório.** Pelo menos uma entrada, sem valores `model` duplicados; mesmo formato de entrada de `POST /api/v1/providers` |
 
-On success, `data` is `{ provider }` with the saved provider item.
+Em caso de sucesso, `data` é `{ provider }` com o item do provedor salvo.
 
-- `40001`: a renamed alias id would collide with another provider's alias
-- `40003`: provider is OAuth-managed — log out via `POST /api/v1/oauth/logout` instead
-- `40412`: provider not found
-- `40921`: `new_id` is already taken
+- `40001`: um id de alias renomeado colidiria com o alias de outro provedor
+- `40003`: o provedor é gerenciado via OAuth — faça logout via `POST /api/v1/oauth/logout` em seu lugar
+- `40412`: provedor não encontrado
+- `40921`: `new_id` já está em uso
 
 #### `DELETE /api/v1/providers/{provider_id}`
 
-Deletes a provider and all of its model aliases; the subagent secondary-model pool is cascaded. The global `default_provider` / `default_model` pointers are left untouched, even when they point at the deleted provider — they are the user's settings, not this endpoint's to garbage-collect.
+Exclui um provedor e todos os seus aliases de modelo; o pool de modelos secundários do subagente é excluído em cascata. Os ponteiros globais `default_provider` / `default_model` permanecem intactos, mesmo quando apontam para o provedor excluído — eles são configurações do usuário e não cabem a este endpoint fazer a coleta de lixo (garbage-collect).
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `provider_id` | path | string | **Required.** Provider id |
+| `provider_id` | path | string | **Obrigatório.** Id do provedor |
 
-On success the server answers 204 with no body — the status line itself reports the delete (see [Response envelope](#response-envelope)).
+Em caso de sucesso, o servidor responde 204 sem corpo — a própria linha de status relata a exclusão (veja [Envelope de resposta](#envelope-de-resposta)).
 
-- `40003`: provider is OAuth-managed — log out via `POST /api/v1/oauth/logout` instead
-- `40412`: provider not found
+- `40003`: o provedor é gerenciado via OAuth — faça logout via `POST /api/v1/oauth/logout` em seu lugar
+- `40412`: provedor não encontrado
 
 #### `POST /api/v1/providers/{provider_id}:refresh`
 
-Re-discovers one provider's model metadata from its upstream source and rewrites the provider's aliases. Providers with a static model source are reported `unchanged` without any network call. When at least one provider's aliases change, the server broadcasts the global `event.model_catalog.changed` event.
+Redescobre os metadados de modelo de um provedor a partir de sua fonte upstream e reescreve os aliases do provedor. Provedores com uma fonte de modelo estática são relatados como `unchanged` (inalterados) sem nenhuma chamada de rede. Quando os aliases de pelo menos um provedor mudam, o servidor transmite o evento global `event.model_catalog.changed`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `provider_id` | path | string | **Required.** Provider id |
+| `provider_id` | path | string | **Obrigatório.** Id do provedor |
 
-On success, `data` is a refresh report: `changed` is an array of `{ provider_id, provider_name, added, removed }` (added/removed alias counts), `unchanged` is an array of provider ids with no diff, and `failed` is an array of `{ provider, reason }`.
+Em caso de sucesso, `data` é um relatório de atualização: `changed` é um array de `{ provider_id, provider_name, added, removed }` (contagens de aliases adicionados/removidos), `unchanged` é um array de ids de provedores sem diferenças e `failed` é um array de `{ provider, reason }`.
 
-- `40001`: malformed or unsupported action suffix in the path
-- `40412`: provider not found
+- `40001`: sufixo de ação malformado ou não suportado no caminho
+- `40412`: provedor não encontrado
 
 #### `POST /api/v1/providers:refresh`
 
-Refreshes model metadata for every provider. The body is optional and ignored.
+Atualiza os metadados de modelo para todos os provedores. O corpo é opcional e ignorado.
 
-On success, `data` is the same refresh report as `POST /api/v1/providers/{provider_id}:refresh` (`changed` / `unchanged` / `failed`).
+Em caso de sucesso, `data` é o mesmo relatório de atualização de `POST /api/v1/providers/{provider_id}:refresh` (`changed` / `unchanged` / `failed`).
 
 #### `POST /api/v1/providers:refresh_oauth`
 
-Same refresh as `POST /api/v1/providers:refresh`, limited to OAuth-backed providers. The body is optional and ignored.
+A mesma atualização de `POST /api/v1/providers:refresh`, limitada a provedores suportados por OAuth. O corpo é opcional e ignorado.
 
-On success, `data` is the refresh report (`changed` / `unchanged` / `failed`).
+Em caso de sucesso, `data` é o relatório de atualização (`changed` / `unchanged` / `failed`).
 
 #### `POST /api/v1/providers:import_catalog`
 
-Imports one models.dev directory entry as a configured provider; the reply is HTTP 201 with the standard envelope. The wire protocol and endpoint come from the catalog resolution, and every catalogued model is written as an alias. Importing an id that already exists is a refresh — the provider entry and its aliases are rewritten from the catalog, and an omitted `api_key` keeps the stored key. The global default pointers are never modified, except that `default_model` is seeded from the first imported model when none is configured at all.
+Importa uma entrada do diretório models.dev como um provedor configurado; a resposta é HTTP 201 com o envelope padrão. O protocolo de transporte e o endpoint vêm da resolução do catálogo, e cada modelo catalogado é escrito como um alias. Importar um id que já existe é uma atualização — a entrada do provedor e seus aliases são reescritos do catálogo, e uma `api_key` omitida mantém a chave armazenada. Os ponteiros padrão globais nunca são modificados, exceto que o `default_model` é preenchido a partir do primeiro modelo importado quando nenhum está configurado no momento.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `catalog_id` | body | string | **Required.** Directory entry id from `GET /api/v1/catalog/providers` |
-| `id` | body | string | Override the catalog id as the local provider id. Same id rules as `POST /api/v1/providers` |
-| `api_key` | body | string | API key for the imported provider |
-| `base_url` | body | string | Override the catalog-resolved endpoint; required when the entry's `needs_base_url` is `true` |
+| `catalog_id` | body | string | **Obrigatório.** Id da entrada de diretório a partir de `GET /api/v1/catalog/providers` |
+| `id` | body | string | Substitui o id do catálogo como o id do provedor local. Mesmas regras de id que `POST /api/v1/providers` |
+| `api_key` | body | string | Chave de API para o provedor importado |
+| `base_url` | body | string | Substitui o endpoint resolvido pelo catálogo; obrigatório quando `needs_base_url` da entrada for `true` |
 
-On success, `data` is `{ provider, models_imported }` — the provider item and the number of aliases written.
+Em caso de sucesso, `data` é `{ provider, models_imported }` — o item do provedor e o número de aliases escritos.
 
-- `40001`: `catalog_id` missing or another body validation failure
-- `40003`: the target provider exists and is OAuth-managed
-- `40004`: the entry cannot be imported (rejected, requires a `base_url`, has no importable models, or its id is unusable as a provider id)
-- `40417`: no directory entry with that `catalog_id`
-- `50004`: the models.dev directory is unavailable
+- `40001`: `catalog_id` faltando ou outra falha de validação do corpo
+- `40003`: o provedor alvo existe e é gerenciado via OAuth
+- `40004`: a entrada não pode ser importada (rejeitada, requer uma `base_url`, não tem modelos importáveis, ou seu id é inutilizável como um id de provedor)
+- `40417`: nenhuma entrada de diretório com esse `catalog_id`
+- `50004`: o diretório models.dev está indisponível
 
 #### `POST /api/v1/providers:import_registry`
 
-Imports a models.dev-shaped private registry — an `api.json` URL plus an optional Bearer key — as configured providers; the reply is HTTP 201 with the standard envelope. Every listed provider is written with a `source` record so scheduled refreshes rediscover it. Re-importing the same URL removes providers that disappeared upstream — the URL is the registry's stable identity, so rotating the key is safe. The global default pointers follow the same rules as `:import_catalog`.
+Importa um registro privado no formato models.dev — uma URL `api.json` mais uma chave Bearer opcional — como provedores configurados; a resposta é HTTP 201 com o envelope padrão. Cada provedor listado é gravado com um registro `source` para que atualizações programadas o redescubram. Reimportar a mesma URL remove os provedores que desapareceram no upstream — a URL é a identidade estável do registro, então rotacionar a chave é seguro. Os ponteiros padrão globais seguem as mesmas regras de `:import_catalog`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `url` | body | string | **Required.** URL of the registry's `api.json` |
-| `api_key` | body | string | Bearer key for the registry; when omitted, the key from the previous import of the same URL is reused |
+| `url` | body | string | **Obrigatório.** URL do `api.json` do registro |
+| `api_key` | body | string | Chave Bearer para o registro; quando omitida, a chave da importação anterior da mesma URL é reutilizada |
 
-On success, `data` is `{ providers, models_imported }` — an array of provider items and the total number of aliases written.
+Em caso de sucesso, `data` é `{ providers, models_imported }` — um array de itens de provedor e o número total de aliases escritos.
 
-- `40001`: `url` missing or another body validation failure
-- `40003`: a listed provider exists and is OAuth-managed
-- `40005`: the registry cannot be fetched or parsed, or lists no importable providers
+- `40001`: `url` faltando ou outra falha de validação do corpo
+- `40003`: um provedor listado existe e é gerenciado via OAuth
+- `40005`: o registro não pode ser buscado ou analisado, ou não lista provedores importáveis
 
 #### `GET /api/v1/catalog/providers`
 
-Browses the models.dev directory, proxied by the server with a 10-minute in-memory cache and a built-in snapshot fallback. Items keep the upstream directory order. Entries the server cannot import carry `rejected: true` with a machine-readable `reject_reason`; entries with `needs_base_url: true` require a base URL at import time.
+Navega no diretório models.dev, com proxy feito pelo servidor com um cache em memória de 10 minutos e um fallback de snapshot embutido. Os itens mantêm a ordem do diretório upstream. Entradas que o servidor não pode importar carregam `rejected: true` com um `reject_reason` legível por máquina; entradas com `needs_base_url: true` exigem uma URL base no momento da importação.
 
-On success, `data.items` is an array of `{ id, name, wire_type, guessed, needs_base_url, rejected, reject_reason, env_key, models }`: `wire_type` is the resolved protocol (nullable, same enum as a provider `type`), `guessed` marks a heuristic resolution, `env_key` is the upstream's conventional API-key environment variable (nullable), and `models` is an array of `{ id, name?, max_context_size, capabilities?, reasoning }`.
+Em caso de sucesso, `data.items` é um array de `{ id, name, wire_type, guessed, needs_base_url, rejected, reject_reason, env_key, models }`: `wire_type` é o protocolo resolvido (nullable, mesmo enum que o `type` de um provedor), `guessed` marca uma resolução heurística, `env_key` é a variável de ambiente convencional da chave de API do upstream (nullable), e `models` é um array de `{ id, name?, max_context_size, capabilities?, reasoning }`.
 
-- `50004`: the directory is unavailable (both the live fetch and the built-in snapshot failed)
+- `50004`: o diretório está indisponível (tanto a busca ao vivo quanto o snapshot embutido falharam)
 
 #### `GET /api/v1/catalog/providers/{catalog_id}`
 
-Reads one models.dev directory entry by catalog id — the same item shape as `GET /api/v1/catalog/providers`.
+Lê uma entrada do diretório models.dev pelo id do catálogo — o mesmo formato de item de `GET /api/v1/catalog/providers`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `catalog_id` | path | string | **Required.** Directory entry id |
+| `catalog_id` | path | string | **Obrigatório.** Id da entrada de diretório |
 
-On success, `data` is the directory entry (same shape as a `GET /api/v1/catalog/providers` item).
+Em caso de sucesso, `data` é a entrada de diretório (mesmo formato que um item de `GET /api/v1/catalog/providers`).
 
-- `40417`: no directory entry with that `catalog_id`
-- `50004`: the directory is unavailable
+- `40417`: nenhuma entrada de diretório com esse `catalog_id`
+- `50004`: o diretório está indisponível
 
-### Sessions
+### Sessões
 
-These endpoints create, list, and inspect sessions, drive session-level actions (fork, compact, undo, and friends), and read per-session rollups. Most of them return a session in the wire shape documented once under [The session object](#the-session-object); non-CRUD operations use the `:{action}` convention described above.
+Estes endpoints criam, listam e inspecionam sessões, conduzem ações no nível da sessão (fork, compact, undo, entre outras) e leem sumarizações (rollups) por sessão. A maioria deles retorna uma sessão no formato de transporte (wire shape) documentado uma vez em [O objeto de sessão](#o-objeto-de-sessão); operações não-CRUD usam a convenção `:{action}` descrita acima.
 
-| Method and path | Description |
+| Método e caminho | Descrição |
 | --- | --- |
-| `POST /api/v1/sessions` | Create a session (requires `workspace_id` or `metadata.cwd`) |
-| `GET /api/v1/sessions` | List sessions; cursor pagination with filters such as `busy` and `archived_only` |
-| `GET /api/v1/sessions/{session_id}` | Read one session |
-| `GET /api/v1/sessions/{session_id}/profile` | Read the session profile |
-| `POST /api/v1/sessions/{session_id}/profile` | Update title, metadata, agent config |
-| `POST /api/v1/sessions/{session_id}/title/generate` | Generate a title via the managed `chat_title` tool |
-| `POST /api/v1/sessions/{session_id}:{action}` | Session actions: `fork` / `compact` / `undo` / `abort` / `btw` / `archive` / `restore` |
-| `GET /api/v1/sessions/{session_id}/children` | List child sessions |
-| `POST /api/v1/sessions/{session_id}/children` | Create a child session (fork with a tag) |
-| `GET /api/v1/sessions/{session_id}/status` | Realtime status rollup |
-| `GET /api/v1/sessions/{session_id}/goal` | Current goal snapshot (`null` when none) |
-| `GET /api/v1/sessions/{session_id}/warnings` | Session-level warnings |
-| `GET /api/v1/sessions/{session_id}/runtime` | Read the main agent's runtime binding |
-| `POST /api/v1/sessions/{session_id}/runtime` | Switch the main agent's runtime binding |
-| `POST /api/v1/sessions/{session_id}/export` | Export the session with diagnostics (zip stream, not enveloped) |
-| `GET /api/v1/sessions/{session_id}/snapshot` | Full snapshot for client rebuilds (with `as_of_seq` and `epoch`) |
-| `GET /api/v1/sessions/{session_id}/media/{file_id}` | Download prompt media by file id (binary) |
+| `POST /api/v1/sessions` | Criar uma sessão (requer `workspace_id` ou `metadata.cwd`) |
+| `GET /api/v1/sessions` | Listar sessões; paginação por cursor com filtros como `busy` e `archived_only` |
+| `GET /api/v1/sessions/{session_id}` | Ler uma sessão |
+| `GET /api/v1/sessions/{session_id}/profile` | Ler o perfil da sessão |
+| `POST /api/v1/sessions/{session_id}/profile` | Atualizar título, metadados, configuração do agente |
+| `POST /api/v1/sessions/{session_id}/title/generate` | Gerar um título via ferramenta gerenciada `chat_title` |
+| `POST /api/v1/sessions/{session_id}:{action}` | Ações de sessão: `fork` / `compact` / `undo` / `abort` / `btw` / `archive` / `restore` |
+| `GET /api/v1/sessions/{session_id}/children` | Listar sessões filhas |
+| `POST /api/v1/sessions/{session_id}/children` | Criar uma sessão filha (fork com uma tag) |
+| `GET /api/v1/sessions/{session_id}/status` | Sumarização (rollup) de status em tempo real |
+| `GET /api/v1/sessions/{session_id}/goal` | Snapshot do objetivo atual (`null` quando nenhum) |
+| `GET /api/v1/sessions/{session_id}/warnings` | Avisos no nível da sessão |
+| `GET /api/v1/sessions/{session_id}/runtime` | Ler a ligação de runtime (runtime binding) do agente principal |
+| `POST /api/v1/sessions/{session_id}/runtime` | Trocar a ligação de runtime do agente principal |
+| `POST /api/v1/sessions/{session_id}/export` | Exportar a sessão com diagnósticos (stream zip, não envelopado) |
+| `GET /api/v1/sessions/{session_id}/snapshot` | Snapshot completo para reconstruções do cliente (com `as_of_seq` e `epoch`) |
+| `GET /api/v1/sessions/{session_id}/media/{file_id}` | Baixar mídia do prompt por id de arquivo (binário) |
 
-#### The session object
+#### O objeto da sessão
 
-Every endpoint that returns a session uses this wire shape. The live facts (`busy`, `main_turn_active`, `pending_interaction`, `last_turn_reason`) are resolved from the session's activity aggregate: a session that is not loaded in this server process (a cold session) always reports not-busy with no pending interaction. A few fields are placeholders in the current projection — this is noted per field.
+Todo endpoint que retorna uma sessão usa este formato de transporte (wire shape). Os fatos em tempo real (`busy`, `main_turn_active`, `pending_interaction`, `last_turn_reason`) são resolvidos a partir do agregado de atividades da sessão: uma sessão que não está carregada neste processo do servidor (uma sessão fria) sempre relata não estar ocupada (not-busy) com nenhuma interação pendente. Alguns campos são marcadores (placeholders) na projeção atual — isso é notado em cada campo.
 
-| Field | Type | Description |
+| Campo | Tipo | Descrição |
 | --- | --- | --- |
-| `id` | string | Session id (`session_...`) |
-| `workspace_id` | string | Owning workspace id |
-| `title` | string | Session title; `""` when untitled |
-| `created_at` / `updated_at` | string | Creation and last-update times, ISO 8601 |
-| `archived` | boolean | Whether the session is archived (hidden from the default session list) |
-| `archived_at` | string | Archive time, ISO 8601; present only when archived |
-| `busy` | boolean | Any agent has an active turn or background task |
-| `main_turn_active` | boolean | The main agent has an active turn |
-| `pending_interaction` | string | `none` / `approval` / `question` — an unanswered interaction is waiting |
-| `last_turn_reason` | string | Main agent's latest turn outcome: `completed` / `cancelled` / `failed` |
-| `last_prompt` | string | Most recent user prompt text, when present |
-| `metadata` | object | Custom metadata; always carries `cwd` (the session's working directory) |
-| `agent_config` | object | Projected as `{ model }`; `model` is `""` in most responses and only filled with the live model by `GET /api/v1/sessions/{session_id}/snapshot` |
-| `usage` | object | Token rollup `{ input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, context_tokens, context_limit?, total_cost_usd?, turn_count? }`; all zeros outside the snapshot endpoint |
-| `permission_rules` | array | Session permission rules; currently always `[]` |
-| `message_count` | integer | Message count; currently always `0` |
-| `last_seq` | integer | Last event sequence number; currently always `0` |
+| `id` | string | Id da sessão (`session_...`) |
+| `workspace_id` | string | Id do workspace proprietário |
+| `title` | string | Título da sessão; `""` quando sem título |
+| `created_at` / `updated_at` | string | Tempos de criação e última atualização, ISO 8601 |
+| `archived` | boolean | Se a sessão está arquivada (oculta da lista de sessões padrão) |
+| `archived_at` | string | Tempo de arquivamento, ISO 8601; presente apenas quando arquivada |
+| `busy` | boolean | Algum agente possui um turno ou tarefa em background ativo |
+| `main_turn_active` | boolean | O agente principal possui um turno ativo |
+| `pending_interaction` | string | `none` / `approval` / `question` — uma interação não respondida está aguardando |
+| `last_turn_reason` | string | Resultado do último turno do agente principal: `completed` / `cancelled` / `failed` |
+| `last_prompt` | string | Texto do prompt de usuário mais recente, quando presente |
+| `metadata` | object | Metadados personalizados; carrega sempre `cwd` (o diretório de trabalho da sessão) |
+| `agent_config` | object | Projetado como `{ model }`; `model` é `""` na maioria das respostas e só é preenchido com o modelo em uso por `GET /api/v1/sessions/{session_id}/snapshot` |
+| `usage` | object | Sumarização (rollup) de tokens `{ input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, context_tokens, context_limit?, total_cost_usd?, turn_count? }`; todos zeros fora do endpoint de snapshot |
+| `permission_rules` | array | Regras de permissão da sessão; atualmente sempre `[]` |
+| `message_count` | integer | Contagem de mensagens; atualmente sempre `0` |
+| `last_seq` | integer | Último número de sequência de evento; atualmente sempre `0` |
 
 #### `POST /api/v1/sessions`
 
