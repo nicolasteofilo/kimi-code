@@ -13,6 +13,7 @@ import { IEventService } from '#/app/event/event';
 import { ITelemetryService } from '#/app/telemetry/telemetry';
 import { ErrorCodes, Error2 } from '#/errors';
 import type { ContentPart } from '#human/llm/message';
+import { skillActivationPart } from '#human/agent/origin';
 import { MAIN_AGENT_ID } from '#/session/agentLifecycle/agentLifecycle';
 import { ISessionContext } from '#/session/sessionContext/sessionContext';
 import { ISessionMetadata } from '#/session/sessionMetadata/sessionMetadata';
@@ -94,6 +95,7 @@ export class AgentSkillService implements IAgentSkillService {
         skillSource: skill.source,
         skillArgs: input.args,
         attachments: input.attachments,
+        clientMetadata: input.clientMetadata,
       },
       content,
     );
@@ -140,7 +142,7 @@ export class AgentSkillService implements IAgentSkillService {
           eventService: this.eventService,
           sessionId: this.sessionContext.sessionId,
         },
-        promptMetadataTextFromContentParts(input.input),
+        promptMetadataTextFromContentParts(input.input, input.clientMetadata),
       );
     }
     for (const activation of prepared) {
@@ -156,6 +158,7 @@ export class AgentSkillService implements IAgentSkillService {
         origin: {
           kind: 'user',
           skillActivations: prepared.map((activation) => activation.entry),
+          clientMetadata: input.clientMetadata,
           attachments: input.attachments,
         } as PromptOrigin,
         tracked: true,
@@ -202,9 +205,10 @@ export class AgentSkillService implements IAgentSkillService {
 
     const skillArgs = input.args ?? '';
     const skillContent = this.renderSkillPrompt(skill, skillArgs);
+    const activationId = randomUUID();
     const origin: SkillActivationOrigin = {
       kind: 'skill_activation',
-      activationId: randomUUID(),
+      activationId,
       skillName: skill.name,
       trigger: 'user-slash',
       skillType: skill.metadata.type,
@@ -214,16 +218,16 @@ export class AgentSkillService implements IAgentSkillService {
     };
     return {
       origin,
-      part: {
-        type: 'text',
-        text: renderUserSlashSkillPrompt({
+      part: skillActivationPart(
+        renderUserSlashSkillPrompt({
           skillName: skill.name,
           skillArgs,
           skillContent,
           skillSource: skill.source,
           skillDir: skill.dir,
         }),
-      },
+        activationId,
+      ),
       entry: {
         activationId: origin.activationId,
         skillName: origin.skillName,
