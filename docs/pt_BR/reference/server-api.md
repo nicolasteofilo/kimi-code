@@ -601,298 +601,292 @@ Todo endpoint que retorna uma sessão usa este formato de transporte (wire shape
 
 #### `POST /api/v1/sessions`
 
-Creates a session and returns it. The target directory comes from `workspace_id` (an already-registered workspace) or from `metadata.cwd` (the workspace is registered on first use); passing both requires them to agree. Creation broadcasts the global `event.session.created` event.
+Cria uma sessão e a retorna. O diretório alvo vem de `workspace_id` (um workspace já registrado) ou de `metadata.cwd` (o workspace é registrado no primeiro uso); passar ambos requer que eles correspondam. A criação transmite o evento global `event.session.created`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `workspace_id` | body | string | **Required** when `metadata.cwd` is absent. Registered workspace id; the session is created at that workspace's root |
-| `metadata` | body | object | Custom metadata. `metadata.cwd` is the working directory and is **required** when `workspace_id` is absent; with both given, it must equal the workspace root |
-| `title` | body | string | Initial title (at least 1 character); the session is untitled otherwise |
-| `agent_config` | body | object | Accepted by the schema but currently not applied — set the model and modes through `POST /api/v1/sessions/{session_id}/profile` |
+| `workspace_id` | body | string | **Obrigatório** quando `metadata.cwd` está ausente. Id de workspace registrado; a sessão é criada na raiz desse workspace |
+| `metadata` | body | object | Metadados personalizados. `metadata.cwd` é o diretório de trabalho e é **obrigatório** quando `workspace_id` está ausente; se ambos forem fornecidos, ele deve ser igual à raiz do workspace |
+| `title` | body | string | Título inicial (pelo menos 1 caractere); caso contrário a sessão fica sem título |
+| `agent_config` | body | object | Aceito pelo schema mas atualmente não aplicado — defina o modelo e os modos através de `POST /api/v1/sessions/{session_id}/profile` |
 
-On success, `data` is [the session object](#the-session-object) of the new session.
+Em caso de sucesso, `data` é [o objeto de sessão](#o-objeto-de-sessão) da nova sessão.
 
-- `40001`: neither `workspace_id` nor `metadata.cwd` given, or `metadata.cwd` does not match the workspace root (`details` lists the field)
-- `40409`: the working directory does not exist or is not a directory
-- `40410`: no registered workspace with that `workspace_id`
+- `40001`: nem `workspace_id` nem `metadata.cwd` fornecidos, ou `metadata.cwd` não corresponde à raiz do workspace (`details` lista o campo)
+- `40409`: o diretório de trabalho não existe ou não é um diretório
+- `40410`: nenhum workspace registrado com esse `workspace_id`
 
 #### `GET /api/v1/sessions`
 
-Lists sessions across workspaces, newest `updated_at` first. Cursor pagination follows [Pagination](#pagination), with one twist: without `page_size` (and without `archived_only`) the response is a single unpaginated window whose `has_more` is always `false`, so pass `page_size` to actually page.
+Lista sessões de todos os workspaces, as mais recentes por `updated_at` primeiro. A paginação por cursor segue a [Paginação](#paginação), com uma particularidade: sem `page_size` (e sem `archived_only`) a resposta é uma única janela não paginada onde `has_more` é sempre `false`, então passe `page_size` para efetivamente paginar.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `before_id` | query | string | Only sessions older than this id; mutually exclusive with `after_id` |
-| `after_id` | query | string | Only sessions newer than this id; mutually exclusive with `before_id` |
-| `page_size` | query | integer | 1–100. When paging applies, the default is `20`; see the note above for the unpaginated default behavior |
-| `busy` | query | boolean | Keep only busy (or only idle) sessions |
-| `include_archive` | query | boolean | Include archived sessions alongside live ones. Default `false` |
-| `archived_only` | query | boolean | Keep only archived sessions; mutually exclusive with `include_archive`; implies cursor paging even without `page_size` |
-| `exclude_empty` | query | boolean | Drop sessions that carry no user prompt |
-| `workspace_id` | query | string | Restrict to one workspace (aliases are resolved) |
+| `before_id` | query | string | Apenas sessões mais antigas que este id; mutuamente exclusivo com `after_id` |
+| `after_id` | query | string | Apenas sessões mais novas que este id; mutuamente exclusivo com `before_id` |
+| `page_size` | query | integer | 1–100. Quando a paginação se aplica, o padrão é `20`; veja a nota acima para o comportamento padrão não paginado |
+| `busy` | query | boolean | Manter apenas sessões ocupadas (ou apenas ociosas) |
+| `include_archive` | query | boolean | Incluir sessões arquivadas junto com as ativas. Padrão `false` |
+| `archived_only` | query | boolean | Manter apenas sessões arquivadas; mutuamente exclusivo com `include_archive`; implica paginação por cursor mesmo sem `page_size` |
+| `exclude_empty` | query | boolean | Descartar sessões que não contêm nenhum prompt de usuário |
+| `workspace_id` | query | string | Restringir a um workspace (aliases são resolvidos) |
 
-On success, `data` is `{ items, has_more }` where each item is [the session object](#the-session-object).
+Em caso de sucesso, `data` é `{ items, has_more }` onde cada item é [o objeto de sessão](#o-objeto-de-sessão).
 
-- `40001`: validation failure — for example `before_id` combined with `after_id`, or `archived_only` combined with `include_archive`
-- `40410`: unknown `workspace_id`
+- `40001`: falha de validação — por exemplo, `before_id` combinado com `after_id`, ou `archived_only` combinado com `include_archive`
+- `40410`: `workspace_id` desconhecido
 
 #### `GET /api/v1/sessions/{session_id}`
 
-Reads one session from the index. Live facts are included when the session is loaded in this process; a cold session reports not-busy with its last persisted turn outcome.
+Lê uma sessão a partir do índice. Fatos em tempo real (live facts) são incluídos quando a sessão está carregada neste processo; uma sessão fria (cold session) relata não estar ocupada (not-busy) com o resultado do seu último turno persistido.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
 
-On success, `data` is [the session object](#the-session-object).
+Em caso de sucesso, `data` é [o objeto de sessão](#o-objeto-de-sessão).
 
-- `40401`: session not found, or its workspace can no longer be resolved
+- `40401`: sessão não encontrada, ou seu workspace não pode mais ser resolvido
 
 #### `GET /api/v1/sessions/{session_id}/profile`
 
-Reads the session profile — the same wire payload as `GET /api/v1/sessions/{session_id}`.
+Lê o perfil da sessão — o mesmo payload de transporte (wire payload) de `GET /api/v1/sessions/{session_id}`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
 
-On success, `data` is [the session object](#the-session-object).
+Em caso de sucesso, `data` é [o objeto de sessão](#o-objeto-de-sessão).
 
-- `40401`: session not found
+- `40401`: sessão não encontrada
 
 #### `POST /api/v1/sessions/{session_id}/profile`
 
-Updates the session's profile: title, custom metadata, and the main agent's config. A title set here becomes a custom title, which wins over generated titles; setting one broadcasts the global `session.meta.updated` event.
+Atualiza o perfil da sessão: título, metadados personalizados e a configuração do agente principal. Um título definido aqui se torna um título personalizado, que tem prioridade sobre títulos gerados; definir um transmite o evento global `session.meta.updated`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `title` | body | string | New title (at least 1 character); becomes a custom title |
-| `metadata` | body | object | Keys merged into the session's custom metadata |
-| `agent_config` | body | object | Partial main-agent config; fields below, all optional |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `title` | body | string | Novo título (pelo menos 1 caractere); torna-se um título personalizado |
+| `metadata` | body | object | Chaves mescladas nos metadados personalizados da sessão |
+| `agent_config` | body | object | Configuração parcial do agente principal; campos abaixo, todos opcionais |
 
-Each `agent_config` field is applied immediately to the main agent:
+Cada campo de `agent_config` é aplicado imediatamente ao agente principal:
 
-| Field | Type | Description |
+| Campo | Tipo | Descrição |
 | --- | --- | --- |
-| `model` | string | Model alias id; an empty string is ignored |
-| `thinking` | string | Thinking-mode effort level |
+| `model` | string | Id do alias do modelo; uma string vazia é ignorada |
+| `thinking` | string | Nível de esforço do modo Thinking |
 | `permission_mode` | string | `manual` / `yolo` / `auto` |
-| `plan_mode` | boolean | Enter or exit Plan mode |
-| `swarm_mode` | boolean | Enter or exit swarm mode |
-| `goal_objective` | string | Create a goal with this objective |
-| `goal_control` | string | `pause` / `resume` / `cancel` the current goal |
+| `plan_mode` | boolean | Entrar ou sair do modo Plan |
+| `swarm_mode` | boolean | Entrar ou sair do modo swarm |
+| `goal_objective` | string | Criar um objetivo (goal) com este propósito (objective) |
+| `goal_control` | string | `pause` / `resume` / `cancel` do objetivo atual |
 
-The schema also accepts `system_prompt`, `tools`, `mcp_servers` inside `agent_config`, and a top-level `permission_rules` array, but the update route currently does not apply them.
+O schema também aceita `system_prompt`, `tools`, `mcp_servers` dentro de `agent_config`, e um array `permission_rules` no nível superior, mas a rota de atualização atualmente não os aplica.
 
-On success, `data` is the updated [session object](#the-session-object).
+Em caso de sucesso, `data` é o [objeto de sessão](#o-objeto-de-sessão) atualizado.
 
-- `40401`: session not found
+- `40401`: sessão não encontrada
 
 #### `POST /api/v1/sessions/{session_id}/title/generate`
 
-Generates a title from the session's prompts through the managed provider's `chat_title` tool and applies it, broadcasting `session.meta.updated`. Generation requires the managed OAuth login and the `auto_session_title` experimental flag; without `force`, a session that already has a custom or generated title is reported unavailable instead of being overwritten.
+Gera um título a partir dos prompts da sessão por meio da ferramenta `chat_title` do provedor gerenciado e o aplica, transmitindo `session.meta.updated`. A geração requer o login OAuth gerenciado e a flag experimental `auto_session_title`; sem `force`, uma sessão que já possui um título personalizado ou gerado é relatada como indisponível em vez de ser sobrescrita.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `force` | body | boolean | Regenerate even when a custom or generated title exists. Default `false` |
-| `source` | body | string | Title input: `user_prompts` (default) / `first_turn` / `digest` |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `force` | body | boolean | Regenerar mesmo quando um título personalizado ou gerado existir. Padrão `false` |
+| `source` | body | string | Entrada do título: `user_prompts` (padrão) / `first_turn` / `digest` |
 
-On success, `data` is `{ title }` — the title now applied to the session.
+Em caso de sucesso, `data` é `{ title }` — o título agora aplicado à sessão.
 
-- `40401`: session not found
-- `40923`: generation unavailable — the flag is off, there is no managed OAuth login or no prompt content yet, an existing title without `force`, or the backend request failed
+- `40401`: sessão não encontrada
+- `40923`: geração indisponível — a flag está desligada, não há login OAuth gerenciado ou ainda não há conteúdo de prompt, um título existente sem `force`, ou a requisição ao backend falhou
 
 #### `POST /api/v1/sessions/{session_id}:{action}`
 
-Session actions are dispatched through one route: the path tail is parsed as `{session_id}:{action}`, the body is validated against the action's schema, and a missing or unknown action fails `40001` (`unsupported action: ...`). Every action resolves the session first, so all of them can return `40401` for an unknown session. The supported actions are documented one by one below.
+As ações de sessão são despachadas por meio de uma única rota: a parte final do caminho (path tail) é analisada como `{session_id}:{action}`, o corpo é validado contra o schema da ação, e uma ação ausente ou desconhecida falha com `40001` (`unsupported action: ...`). Toda ação resolve a sessão primeiro, de modo que todas elas podem retornar `40401` para uma sessão desconhecida. As ações suportadas estão documentadas uma a uma abaixo.
 
 #### `POST /api/v1/sessions/{session_id}:fork`
 
-Copies the session — its transcript, agent state, and files — into a new session in the same workspace, and broadcasts `event.session.created`. Forking is rejected while any of the session's agents has an active turn.
+Copia a sessão — sua transcrição, estado do agente e arquivos — para uma nova sessão no mesmo workspace, e transmite `event.session.created`. O fork é rejeitado enquanto qualquer um dos agentes da sessão tiver um turno ativo.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `title` | body | string | Title for the fork (at least 1 character). Default `Fork: <source title>` |
-| `metadata` | body | object | Custom metadata for the fork |
+| `title` | body | string | Título para o fork (pelo menos 1 caractere). Padrão `Fork: <source title>` |
+| `metadata` | body | object | Metadados personalizados para o fork |
 
-On success, `data` is [the session object](#the-session-object) of the new session.
+Em caso de sucesso, `data` é [o objeto de sessão](#o-objeto-de-sessão) da nova sessão.
 
-- `40901`: the session has an active turn and cannot be forked
+- `40901`: a sessão tem um turno ativo e não pode sofrer fork
 
 #### `POST /api/v1/sessions/{session_id}:compact`
 
-Starts a manual full compaction of the main agent's context. The call returns immediately; progress and completion are delivered as the `compaction.*` WebSocket events.
+Inicia uma compactação completa manual do contexto do agente principal. A chamada retorna imediatamente; o progresso e a conclusão são entregues como os eventos WebSocket `compaction.*`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `instruction` | body | string | Extra guidance for the compaction summary; a blank value is ignored |
+| `instruction` | body | string | Orientação extra para o resumo da compactação; um valor em branco é ignorado |
 
-On success, `data` is an empty object.
+Em caso de sucesso, `data` é um objeto vazio.
 
-- `40910`: a turn or another context change is active, or the history has nothing to compact
+- `40910`: um turno ou outra mudança de contexto está ativo(a), ou o histórico não tem nada para compactar
 
 #### `POST /api/v1/sessions/{session_id}:undo`
 
-Rewinds the main agent's conversation by `count` turns and reconciles the derived session state (including the session's `last_prompt`).
+Retrocede a conversa do agente principal em `count` turnos e reconcilia o estado derivado da sessão (incluindo o `last_prompt` da sessão).
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `count` | body | integer | Number of turns to undo; positive integer. Default `1` |
-| `page_size` | body | integer | Size of the returned history window, 1–100. Default `50` |
+| `count` | body | integer | Número de turnos para desfazer; inteiro positivo. Padrão `1` |
+| `page_size` | body | integer | Tamanho da janela de histórico retornada, 1–100. Padrão `50` |
 
-On success, `data` is `{ messages, status }`: `messages` is a `{ items, has_more }` page of the remaining context messages, newest first, and `status` is the same rollup as `GET /api/v1/sessions/{session_id}/status`.
+Em caso de sucesso, `data` é `{ messages, status }`: `messages` é uma página `{ items, has_more }` das mensagens de contexto restantes, as mais novas primeiro, e `status` é a mesma sumarização (rollup) de `GET /api/v1/sessions/{session_id}/status`.
 
-- `40901`: a turn is active or a compaction is running — wait for it to finish, then retry
-- `40911`: that many turns cannot be undone (a compaction boundary or lost checkpoints); `data` carries `{ reason, requestedCount, undoableCount }`
+- `40901`: um turno está ativo ou uma compactação está em execução — espere terminar e tente novamente
+- `40911`: essa quantidade de turnos não pode ser desfeita (um limite de compactação ou checkpoints perdidos); `data` carrega `{ reason, requestedCount, undoableCount }`
 
 #### `POST /api/v1/sessions/{session_id}:abort`
 
-Cancels the main agent's running turn — the programmatic equivalent of the user aborting the turn in the TUI.
+Cancela o turno em execução do agente principal — o equivalente programático ao usuário abortando o turno na TUI.
 
-On success, `data` is `{ aborted: true }`.
+Em caso de sucesso, `data` é `{ aborted: true }`.
 
 #### `POST /api/v1/sessions/{session_id}:btw`
 
-Starts a "by the way" side conversation: forks the main agent into a child agent whose tool calls are disabled, so quick side questions run in isolation without touching the working context. Requires a usable model configuration.
+Inicia uma conversa paralela "by the way" (a propósito): faz um fork do agente principal em um agente filho cujas chamadas de ferramenta estão desabilitadas, de modo que perguntas rápidas e paralelas rodem em isolamento sem tocar no contexto de trabalho. Requer uma configuração de modelo utilizável.
 
-On success, `data` is `{ agent_id }` — the id of the new child agent.
+Em caso de sucesso, `data` é `{ agent_id }` — o id do novo agente filho.
 
 #### `POST /api/v1/sessions/{session_id}:archive`
 
-Marks the session archived: it disappears from the default session list (it stays listed with `include_archive` or `archived_only`), and the server broadcasts the global `event.session.archived` event.
+Marca a sessão como arquivada: ela desaparece da lista de sessões padrão (permanece listada com `include_archive` ou `archived_only`), e o servidor transmite o evento global `event.session.archived`.
 
-On success, `data` is `{ archived: true }`.
+Em caso de sucesso, `data` é `{ archived: true }`.
 
 #### `POST /api/v1/sessions/{session_id}:restore`
 
-Un-archives the session and resumes it.
+Desarquiva a sessão e a retoma.
 
-On success, `data` is [the session object](#the-session-object) with `archived: false`.
+Em caso de sucesso, `data` é [o objeto de sessão](#o-objeto-de-sessão) com `archived: false`.
 
 #### `GET /api/v1/sessions/{session_id}/children`
 
-Lists the session's children — the sessions created through `POST /api/v1/sessions/{session_id}/children`. Cursor pagination follows [Pagination](#pagination).
+Lista as filhas da sessão — as sessões criadas através de `POST /api/v1/sessions/{session_id}/children`. A paginação por cursor segue a [Paginação](#paginação).
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `before_id` | query | string | Only children older than this id; mutually exclusive with `after_id` |
-| `after_id` | query | string | Only children newer than this id; mutually exclusive with `before_id` |
-| `page_size` | query | integer | 1–100. Default `100` |
-| `busy` | query | boolean | Keep only busy (or only idle) children |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `before_id` | query | string | Apenas filhas mais antigas que este id; mutuamente exclusivo com `after_id` |
+| `after_id` | query | string | Apenas filhas mais novas que este id; mutuamente exclusivo com `before_id` |
+| `page_size` | query | integer | 1–100. Padrão `100` |
+| `busy` | query | boolean | Manter apenas filhas ocupadas (ou apenas ociosas) |
 
-On success, `data` is `{ items, has_more }` where each item is [the session object](#the-session-object).
+Em caso de sucesso, `data` é `{ items, has_more }` onde cada item é [o objeto de sessão](#o-objeto-de-sessão).
 
-- `40401`: session not found
+- `40401`: sessão não encontrada
 
 #### `POST /api/v1/sessions/{session_id}/children`
 
-Creates a child session: a fork of this session recorded as its child, so it shows up under `GET /api/v1/sessions/{session_id}/children`. The same active-turn restriction as `:fork` applies.
+Cria uma sessão filha: um fork desta sessão gravado como sua filha, para que apareça em `GET /api/v1/sessions/{session_id}/children`. A mesma restrição de turno ativo de `:fork` se aplica.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `title` | body | string | Title for the child (at least 1 character). Default `Child: <source title>` |
-| `metadata` | body | object | Custom metadata for the child |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `title` | body | string | Título para a filha (pelo menos 1 caractere). Padrão `Child: <source title>` |
+| `metadata` | body | object | Metadados personalizados para a filha |
 
-On success, `data` is [the session object](#the-session-object) of the new session, and the server broadcasts `event.session.created`.
+Em caso de sucesso, `data` é [o objeto de sessão](#o-objeto-de-sessão) da nova sessão, e o servidor transmite `event.session.created`.
 
-- `40901`: the session has an active turn and cannot be forked
+- `40901`: a sessão tem um turno ativo e não pode sofrer fork
 
 #### `GET /api/v1/sessions/{session_id}/status`
 
-Realtime status rollup of the main agent; reading it resumes the session if it is cold.
+Sumarização (rollup) de status em tempo real do agente principal; lê-la retoma a sessão se ela estiver fria (cold).
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
 
-On success, `data` is `{ busy, model?, thinking_level, permission, plan_mode, swarm_mode, context_tokens, max_context_tokens?, context_usage? }`: `busy` reports an active turn, `model` / `thinking_level` / `permission` are the effective agent settings, `plan_mode` / `swarm_mode` are the mode flags, and `context_tokens` with `max_context_tokens` and `context_usage` (0–1) describe context-window consumption.
+Em caso de sucesso, `data` é `{ busy, model?, thinking_level, permission, plan_mode, swarm_mode, context_tokens, max_context_tokens?, context_usage? }`: `busy` relata um turno ativo, `model` / `thinking_level` / `permission` são as configurações efetivas do agente, `plan_mode` / `swarm_mode` são as flags de modo, e `context_tokens` com `max_context_tokens` e `context_usage` (0–1) descrevem o consumo da janela de contexto.
 
-- `40401`: session not found
+- `40401`: sessão não encontrada
 
 #### `GET /api/v1/sessions/{session_id}/goal`
 
-Reads the session's current goal snapshot, or `null` when no goal is active. Note that this payload uses camelCase keys, unlike most of this API.
+Lê o snapshot do objetivo (goal) atual da sessão, ou `null` quando nenhum objetivo está ativo. Observe que este payload usa chaves em camelCase, ao contrário da maior parte desta API.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
 
-On success, `data` is `null` or `{ goalId, objective, completionCriterion?, status, turnsUsed, tokensUsed, wallClockMs, budget, terminalReason? }`, where `status` is `active` / `paused` / `blocked` / `complete` and `budget` reports the token, turn, and wall-clock budgets together with the remaining amounts and per-budget reached flags (each nullable when no such budget is set).
+Em caso de sucesso, `data` é `null` ou `{ goalId, objective, completionCriterion?, status, turnsUsed, tokensUsed, wallClockMs, budget, terminalReason? }`, onde `status` é `active` / `paused` / `blocked` / `complete` e `budget` relata os orçamentos (budgets) de token, turno e tempo de relógio (wall-clock) junto com as quantias restantes e as flags de atingimento por orçamento (cada uma anulável/nullable quando tal orçamento não está definido).
 
-- `40401`: session not found
+- `40401`: sessão não encontrada
 
 #### `GET /api/v1/sessions/{session_id}/warnings`
 
-Reads session-level warnings. The current producer is the oversized `AGENTS.md` check (`agents-md-oversized`), so the list is empty for most sessions.
+Lê os avisos (warnings) no nível da sessão. O produtor atual é a verificação de `AGENTS.md` sobredimensionado (`agents-md-oversized`), então a lista está vazia para a maioria das sessões.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
 
-On success, `data` is `{ warnings }`, each entry `{ code, message, severity }` with `severity` one of `info` / `warning` / `error`.
+Em caso de sucesso, `data` é `{ warnings }`, cada entrada `{ code, message, severity }` com `severity` sendo um de `info` / `warning` / `error`.
 
-- `40401`: session not found
+- `40401`: sessão não encontrada
 
 #### `GET /api/v1/sessions/{session_id}/runtime`
 
-Reads the main agent's runtime binding — which runtime the session's agent loop runs on.
-
-| Parameter | In | Type | Description |
-| --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-
-On success, `data` is `{ workspace_id, runtime_id }`.
-
-- `40401`: session not found
+Lê a ligação de runtime (runtime binding) do agente principal
 
 #### `POST /api/v1/sessions/{session_id}/runtime`
 
-Switches the main agent's runtime binding.
+#### `POST /api/v1/sessions/{session_id}/runtime`
 
-| Parameter | In | Type | Description |
+Troca a ligação de runtime (runtime binding) do agente principal.
+
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `runtime_id` | body | string | **Required.** Target runtime id |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `runtime_id` | body | string | **Obrigatório.** Id do runtime alvo |
 
-On success, `data` is the new binding `{ workspace_id, runtime_id }`.
+Em caso de sucesso, `data` é a nova ligação `{ workspace_id, runtime_id }`.
 
-- `40420`: no runtime with that `runtime_id`
-- `40926`: the runtime exists but is unavailable
+- `40420`: nenhum runtime com esse `runtime_id`
+- `40926`: o runtime existe, mas está indisponível
 
 #### `POST /api/v1/sessions/{session_id}/export`
 
-Exports the session together with diagnostic logs as a zip attachment (`kimi-session-<id>.zip`). The response is a binary stream, not a JSON envelope — capabilities and failure semantics are covered under [Binary and streaming endpoints](#binary-and-streaming-endpoints).
+Exporta a sessão junto com logs de diagnóstico como um anexo zip (`kimi-session-<id>.zip`). A resposta é um stream binário, não um envelope JSON — as semânticas de capacidades e falhas são cobertas em [Endpoints binários e de streaming](#endpoints-binários-e-de-streaming).
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `web_log` | body | string | Client log text to include in the archive, at most 256 KB UTF-8 |
-| `desktop` | body | boolean | Also include the desktop host's log. Default `false` |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `web_log` | body | string | Texto do log do cliente para incluir no arquivo, no máximo 256 KB UTF-8 |
+| `desktop` | body | boolean | Incluir também o log do host de desktop. Padrão `false` |
 
 #### `GET /api/v1/sessions/{session_id}/snapshot`
 
-Assembles an atomic snapshot for rebuilding a client after a resync: the session, recent messages, the in-flight turn, live subagents, and pending interactions, all stamped with the `as_of_seq` watermark and `epoch` used to resubscribe — see [Reconnect and recovery](#reconnect-and-recovery). Unlike the plain session endpoints, the embedded session carries the live `agent_config.model` and real `usage` totals.
+Monta um snapshot atômico para reconstruir um cliente após um resync: a sessão, mensagens recentes, o turno em andamento (in-flight), subagentes em tempo real e interações pendentes, todos carimbados com a marca d'água `as_of_seq` e a `epoch` usada para reassinar — veja [Reconexão e recuperação](#reconexão-e-recuperação). Ao contrário dos endpoints de sessão simples, a sessão embutida carrega o `agent_config.model` em tempo real e os totais reais de `usage`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
 
-On success, `data` is `{ as_of_seq, epoch, session, messages, in_flight_turn, subagents?, pending_approvals, pending_questions }`: `session` is [the session object](#the-session-object), `messages` is the newest 100 messages as `{ items, has_more }`, `in_flight_turn` is the partially streamed turn (`null` when idle, with `current_prompt_id` when known), `subagents` lists live subagent tasks, and `pending_approvals` / `pending_questions` carry the unanswered interactions.
+Em caso de sucesso, `data` é `{ as_of_seq, epoch, session, messages, in_flight_turn, subagents?, pending_approvals, pending_questions }`: `session` é [o objeto de sessão](#o-objeto-de-sessão), `messages` são as 100 mensagens mais recentes como `{ items, has_more }`, `in_flight_turn` é o turno parcialmente em streaming (`null` quando ocioso, com `current_prompt_id` quando conhecido), `subagents` lista as tarefas de subagentes em tempo real, e `pending_approvals` / `pending_questions` carregam as interações não respondidas.
 
-- `40401`: session not found
+- `40401`: sessão não encontrada
 
 #### `GET /api/v1/sessions/{session_id}/media/{file_id}`
 
-Downloads a prompt media file (an image or other attachment referenced by the session's prompts) by file id; an id not yet committed to the session falls back to the staged uploads. The response is binary with `Range` support (206 on ranged requests) — see [Binary and streaming endpoints](#binary-and-streaming-endpoints) for the shared conventions; unlike the enveloped endpoints there, a missing session or file answers with a real 404 status carrying an envelope body.
+Baixa um arquivo de mídia de prompt (uma imagem ou outro anexo referenciado pelos prompts da sessão) pelo id do arquivo; um id que ainda não foi consolidado (committed) na sessão faz fallback para os uploads preparados (staged). A resposta é binária com suporte a `Range` (206 em requisições de intervalo) — veja [Endpoints binários e de streaming](#endpoints-binários-e-de-streaming) para as convenções compartilhadas; ao contrário dos endpoints envelopados lá, uma sessão ou arquivo ausente responde com um status 404 real carregando um corpo de envelope.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `file_id` | path | string | **Required.** Media file id |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `file_id` | path | string | **Obrigatório.** Id do arquivo de mídia |
 
 ### Messages and transcript
 
