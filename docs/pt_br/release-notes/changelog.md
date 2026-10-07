@@ -495,233 +495,233 @@ Consulte a [documentação do pool de modelos de subagentes](https://moonshotai.
 
 ## 0.29.0 (2026-07-22)
 
-### Features
+### Funcionalidades
 
-- web: Support defining agents in Markdown files, declaring system prompt, name, description, and tool permissions. [Details](https://moonshotai.github.io/kimi-code/en/customization/agents.html#agent-file-format)
-- web: Permanently override the main agent's system prompt with SYSTEM.md. [Details](https://moonshotai.github.io/kimi-code/en/customization/agents.html#overriding-the-main-agent-s-system-prompt-with-system-md)
-- web: Globally enable or disable tools across all sessions via config.toml. [Details](https://moonshotai.github.io/kimi-code/en/configuration/config-files.html#tools)
-- Videos attached to a prompt now reach the model together with the prompt, with no extra tool round trip.
-- Support selecting a thinking effort level from ACP clients.
-- Add environment variable overrides for agent loop and background task limits.
+- web: Suporte à definição de agentes em arquivos Markdown, declarando prompt do sistema, nome, descrição e permissões de ferramentas. [Detalhes](https://moonshotai.github.io/kimi-code/en/customization/agents.html#agent-file-format)
+- web: Substituição permanente do prompt do sistema do agente principal usando SYSTEM.md. [Detalhes](https://moonshotai.github.io/kimi-code/en/customization/agents.html#overriding-the-main-agent-s-system-prompt-with-system-md)
+- web: Ativação ou desativação global de ferramentas em todas as sessões por meio do config.toml. [Detalhes](https://moonshotai.github.io/kimi-code/en/configuration/config-files.html#tools)
+- Vídeos anexados a um prompt agora chegam ao modelo junto com o prompt, sem uma rodada adicional de ferramentas.
+- Suporte à seleção de um nível de thinking effort a partir de clientes ACP.
+- Adição de substituições por variáveis de ambiente para os limites do agent loop e das background tasks.
 
-### Polish
+### Melhorias
 
-- Import many more providers from the models.dev catalog.
-- Improve TUI performance and resume speed for long-running sessions.
-- Reconnect a dropped MCP server connection automatically when one of its tools is called, and retry the call once.
-- Remove red coloring from syntax highlighting in code previews and markdown code blocks.
-- Add a reminder for third-party install sources to use the official installer in the update prompt.
+- Importação de muito mais provedores do catálogo models.dev.
+- Melhoria do desempenho do TUI e da velocidade de retomada de sessões de longa duração.
+- Reconexão automática de uma conexão perdida com um servidor MCP quando uma de suas ferramentas é chamada, com uma nova tentativa da chamada.
+- Remoção da cor vermelha do syntax highlighting nas pré-visualizações de código e nos blocos de código Markdown.
+- Adição de um lembrete para fontes de instalação de terceiros utilizarem o instalador oficial no prompt de atualização.
 
-### Bug Fixes
+### Correções de bugs
 
-- Fix sessions getting stuck with a provider "message must not be empty" error after a content-filtered response.
-- Fix cancelled model requests being wrapped as retryable provider errors.
-- Fix thinking levels being offered for models that do not support them.
-- Fix config environment overrides being persisted into config.toml while the env var is set.
-- Send the session prompt cache key to OpenAI and OpenAI Responses providers.
-- Fix ReadMediaFile failing on videos when the provider has no file upload channel.
-- Fix goal mode continuation prompts leaking into the transcript when resuming a session.
-- web: Show transparent images over a checkerboard canvas.
-- Remove references to the non-existent `kimi resume` command from the scheduled-task tool descriptions.
+- Correção de sessões que ficam travadas com o erro de provedor "message must not be empty" após uma resposta filtrada por conteúdo.
+- Correção de solicitações de modelo canceladas que estavam sendo tratadas como erros de provedor que permitem novas tentativas.
+- Correção da exibição de níveis de thinking para modelos que não oferecem suporte a eles.
+- Correção de substituições de configuração por variáveis de ambiente que estavam sendo persistidas no config.toml enquanto a variável de ambiente estivesse definida.
+- Envio da chave de cache do prompt da sessão para os provedores OpenAI e OpenAI Responses.
+- Correção da falha do ReadMediaFile em vídeos quando o provedor não possui um canal de upload de arquivos.
+- Correção de prompts de continuação do goal mode que vazavam para o transcript ao retomar uma sessão.
+- web: Exibição de imagens transparentes sobre um canvas quadriculado.
+- Remoção de referências ao comando inexistente `kimi resume` das descrições das ferramentas de tarefas agendadas.
 
 ## 0.28.1 (2026-07-20)
 
-### Features
+### Funcionalidades
 
-- Allow ACP sessions to start with configured non-OAuth model credentials instead of requiring terminal login.
+- Permitir que sessões ACP sejam iniciadas com credenciais de modelo não-OAuth configuradas, em vez de exigir login pelo terminal.
 
-### Polish
+### Melhorias
 
-- Run web servers foreground-only end to end: the /web slash command now always starts a new server, and the `kimi web kill` / `kimi web ps` subcommands are removed — foreground servers stop with Ctrl+C. `kimi server kill` remains as a deprecated fallback that only stops servers started by a version before 0.28.0.
+- Executar servidores web somente em primeiro plano de ponta a ponta: o comando /web agora sempre inicia um novo servidor, e os subcomandos `kimi web kill` / `kimi web ps` foram removidos — servidores em primeiro plano são encerrados com Ctrl+C. `kimi server kill` continua disponível como alternativa obsoleta que só encerra servidores iniciados por uma versão anterior à 0.28.0.
 
-### Bug Fixes
+### Correções de bugs
 
-- Fix running subagents not observing permission mode switches made after they started.
+- Corrigir subagentes em execução que não observavam alterações no modo de permissão feitas após seu início.
 
 ## 0.28.0 (2026-07-20)
 
-### Features
+### Funcionalidades
 
 - **Breaking:**
-  - The `kimi server` command tree is deprecated; use `kimi web` instead.
-  - `kimi web` now runs in the foreground of the current terminal and opens the browser; stop it with Ctrl+C.
+  - A árvore de comandos `kimi server` está obsoleta; use `kimi web` em seu lugar.
+  - `kimi web` agora é executado em primeiro plano no terminal atual e abre o navegador; encerre-o com Ctrl+C.
 
-### Polish
+### Melhorias
 
-- Thinking effort persists only levels below the model's top tier (max).
-- web: Add a note in the model switcher that switching models or thinking effort invalidates the existing prompt cache.
+- O thinking effort persiste apenas nos níveis abaixo do nível máximo do modelo (max).
+- web: Adição de uma observação no seletor de modelos informando que a troca de modelo ou de thinking effort invalida o prompt cache existente.
 
-### Bug Fixes
+### Correções de bugs
 
-- Correct the YOLO and Auto permission mode descriptions: YOLO auto-approves tool actions but the agent may still ask questions, while Auto is fully autonomous and never asks.
-- Fix the web backend ignoring symbolic links when loading AGENTS.md files and reading files.
+- Correção das descrições dos modos de permissão YOLO e Auto: YOLO aprova automaticamente as ações das ferramentas, mas o agente ainda pode fazer perguntas, enquanto Auto é totalmente autônomo e nunca faz perguntas.
+- Correção do backend web que ignorava links simbólicos ao carregar arquivos AGENTS.md e ler arquivos.
 
 ## 0.27.0 (2026-07-17)
 
-### Features
+### Funcionalidades
 
-- Add the /copy slash command to copy the last assistant message to the clipboard.
-- Using an API key for Kimi coding models now also fetches the latest model list automatically.
+- Adição do comando /copy para copiar a última mensagem do assistente para a área de transferência.
+- O uso de uma chave de API para modelos de programação Kimi agora também busca automaticamente a lista de modelos mais recente.
 
-### Polish
+### Melhorias
 
-- OAuth connection errors now include the underlying network cause (DNS, refused connection, TLS, or timeout) instead of a bare "fetch failed".
+- Erros de conexão OAuth agora incluem a causa de rede subjacente (DNS, conexão recusada, TLS ou timeout), em vez de apenas "fetch failed".
 
-### Bug Fixes
+### Correções de bugs
 
-- Fix repeated request rejections after an interrupted model response.
-- Fix the built-in URL fetch tool's network safeguards: crafted domains and redirect chains can no longer reach loopback or internal network services.
-- web: Fix LaTeX formulas rendering as garbled overlapping text when the web UI is accessed over the network.
-- web: Fix queued messages silently re-sending previously uploaded files when a session is reopened.
-- web: Remember the thinking level per model, fixing an empty, unresponsive thinking picker when the model doesn't support the stored level.
-- web: Fix duplicate workspace groups on Windows when the same folder is opened with different path spellings; its sessions now list under one merged group.
-- Fix AGENTS.md files installed as symbolic links being ignored by the web backend.
-- Fix Esc and Ctrl+C cancelling compaction instead of closing an open /btw panel.
-- Fix whitespace-only thinking content rendering as a blank line in the transcript.
-- Fix `/export-debug-zip` and `kimi export` overwriting the previous ZIP on repeated runs for the same session; the default filename now includes a timestamp.
+- Correção de rejeições repetidas de solicitações após uma resposta de modelo interrompida.
+- Correção das proteções de rede da ferramenta integrada de busca de URLs: domínios manipulados e cadeias de redirecionamento não podem mais acessar serviços de loopback ou da rede interna.
+- web: Correção de fórmulas LaTeX que eram renderizadas como texto sobreposto e ilegível quando a interface web era acessada pela rede.
+- web: Correção de mensagens enfileiradas que reenviavam silenciosamente arquivos enviados anteriormente quando uma sessão era reaberta.
+- web: Lembrança do nível de thinking por modelo, corrigindo um seletor de thinking vazio e sem resposta quando o modelo não oferece suporte ao nível armazenado.
+- web: Correção de grupos de workspaces duplicados no Windows quando a mesma pasta é aberta com diferentes formas de escrever o caminho; agora suas sessões são listadas em um único grupo mesclado.
+- Correção de arquivos AGENTS.md instalados como links simbólicos que eram ignorados pelo backend web.
+- Correção de Esc e Ctrl+C que cancelavam a compactação em vez de fechar um painel /btw aberto.
+- Correção do conteúdo de thinking composto apenas por espaços em branco, que era renderizado como uma linha vazia no transcript.
+- Correção de `/export-debug-zip` e `kimi export`, que sobrescreviam o ZIP anterior em execuções repetidas para a mesma sessão; o nome de arquivo padrão agora inclui um timestamp.
 
-## 0.26.0 (2026-07-16) Say hi to the BIIIG DAY!
+## 0.26.0 (2026-07-16)
 
-### Polish
+### Melhorias
 
-- Expand the coder subagent tool set to include background tasks, todo lists, plan mode, skill invocation, and nested agents, mirroring the main agent's capabilities.
-- Warn in the `/model` and `/effort` pickers that switching invalidates the existing prompt cache, and hint to use `/new` to avoid extra token costs.
-- web: Refresh the model catalog for all providers when opening the model picker, so newly available models always show up.
-- Optimize the unit formatting of the context usage display.
+- Expansão do conjunto de ferramentas do subagente coder para incluir tarefas em segundo plano, listas de tarefas, modo plan, invocação de skills e agentes aninhados, espelhando as capacidades do agente principal.
+- Aviso nos seletores `/model` e `/effort` de que a troca invalida o prompt cache existente, com uma sugestão para usar `/new` e evitar custos adicionais de tokens.
+- web: Atualização do catálogo de modelos de todos os provedores ao abrir o seletor de modelos, para que os modelos recém-disponibilizados sejam sempre exibidos.
+- Otimização da formatação das unidades na exibição de uso do contexto.
 
-### Bug Fixes
+### Correções de bugs
 
-- Fix a resumed session being marked as just updated and jumping to the top of the session list without any new activity.
-- Fix the context size indicator under-reporting the model's actual context usage.
-- Fix Kimi-provider models routed through the Anthropic protocol incorrectly showing reasoning effort options.
-- Honor an explicit thinking "off" on OpenAI-compatible (chat completions) providers.
-- Report when users stop tasks and preserve other stop reasons in model context.
-- Fix a race where resuming a background subagent right after it was manually stopped could fail with an "already running" error.
-- Replay empty thinking content verbatim instead of substituting a placeholder space on Anthropic-compatible and Kimi preserved-thinking endpoints.
-- Keep legacy migrations idempotent across multiple Kimi homes and report damaged or unmapped sessions instead of silently skipping them.
-- web: Fix the sidebar resize handle being covered by the chat composer background.
+- Correção de uma sessão retomada que era marcada como recém-atualizada e movida para o topo da lista de sessões sem nenhuma nova atividade.
+- Correção do indicador de tamanho do contexto que informava um uso de contexto inferior ao real do modelo.
+- Correção de modelos do provedor Kimi encaminhados pelo protocolo Anthropic que exibiam incorretamente opções de esforço de raciocínio.
+- Respeito à configuração explícita de thinking como "off" em provedores compatíveis com OpenAI (chat completions).
+- Exibição de uma informação quando os usuários interrompem tarefas e preservação dos outros motivos de interrupção no contexto do modelo.
+- Correção de uma condição de corrida em que retomar um subagente em segundo plano logo após ele ser interrompido manualmente poderia falhar com um erro de "already running".
+- Reprodução do conteúdo vazio de thinking literalmente, em vez de substituí-lo por um espaço como placeholder em endpoints compatíveis com Anthropic e Kimi com thinking preservado.
+- Manutenção das migrações legadas idempotentes em múltiplos diretórios Kimi e exibição de sessões danificadas ou não mapeadas em vez de ignorá-las silenciosamente.
+- web: Correção da alça de redimensionamento da barra lateral que ficava coberta pelo fundo do compositor de chat.
 
 ## 0.25.0 (2026-07-16)
 
-### Features
+### Funcionalidades
 
-- web: Attach any file type in chat — files can be dropped anywhere in the window, and sent files, images, and videos show as chips in the message bubble.
+- web: Anexar qualquer tipo de arquivo no chat — arquivos podem ser arrastados para qualquer lugar da janela, e arquivos, imagens e vídeos enviados são exibidos como chips no balão da mensagem.
 
-### Polish
+### Melhorias
 
-- web: Show full diagnostics for model request failures.
-- Apply official Anthropic effort profiles and a 128k output fallback for unknown models.
+- web: Exibir diagnósticos completos para falhas nas solicitações ao modelo.
+- Aplicar os perfis de esforço oficiais da Anthropic e um fallback de saída de 128k para modelos desconhecidos.
 
-### Bug Fixes
+### Correções de bugs
 
-- Fix the web server bearer-token check being bypassed by percent-encoded API paths, which allowed unauthenticated access to every API route.
-- Fix the session filesystem API following symlinks that point outside the workspace, which allowed accessing host files beyond the session directory.
-- web: Keep session activity indicators in sync with agent work and prevent duplicate streamed content after session activation races or LLM retries.
-- Fix custom-named models on Anthropic-compatible providers starting new sessions with thinking effort off and not showing the thinking control in ACP clients.
-- Honor adaptive_thinking = false on Anthropic-compatible models by omitting the effort parameter from requests.
-- web: Fix the Content-Security-Policy on non-loopback server binds blocking the web UI's theme bootstrap script and bundled fonts.
-- Fix sessions failing to be created when the workspace directory is given through a symlink.
-- Fix the CLI exiting unexpectedly when reading an image from the clipboard fails; it now falls back to pasting text.
-- web: Fix completed background subagents losing their final output after a session reload.
-- web: Fix Enter not confirming modal confirmation dialogs in dev builds.
-- web: Fix a background subagent showing up as two identical rows in the agents dock panel during streaming.
-- Fix the diagnostic log missing the actual error when the CLI exits unexpectedly.
+- Corrigir a verificação do bearer token do servidor web que podia ser contornada por caminhos de API codificados em porcentagem, permitindo acesso não autenticado a todas as rotas da API.
+- Corrigir a API do sistema de arquivos da sessão que seguia links simbólicos apontando para fora do workspace, permitindo acesso a arquivos do host além do diretório da sessão.
+- web: Manter os indicadores de atividade da sessão sincronizados com o trabalho do agente e impedir conteúdo transmitido duplicado após condições de corrida na ativação da sessão ou novas tentativas do LLM.
+- Corrigir modelos com nomes personalizados em provedores compatíveis com Anthropic que iniciavam novas sessões com o thinking desativado e não exibiam o controle de thinking em clientes ACP.
+- Respeitar `adaptive_thinking = false` em modelos compatíveis com Anthropic, omitindo o parâmetro de esforço das solicitações.
+- web: Corrigir a Content-Security-Policy em servidores vinculados a endereços que não são de loopback, que bloqueava o script de inicialização do tema da interface web e as fontes incluídas no pacote.
+- Corrigir sessões que não conseguiam ser criadas quando o diretório do workspace era fornecido por meio de um link simbólico.
+- Corrigir a CLI que era encerrada inesperadamente quando a leitura de uma imagem da área de transferência falhava; agora ela usa texto colado como alternativa.
+- web: Corrigir subagentes em segundo plano concluídos que perdiam sua saída final após o recarregamento de uma sessão.
+- web: Corrigir o Enter que não confirmava diálogos modais de confirmação em builds de desenvolvimento.
+- web: Corrigir um subagente em segundo plano que aparecia como duas linhas idênticas no painel de agentes durante o streaming.
+- Corrigir o log de diagnóstico que não registrava o erro real quando a CLI era encerrada inesperadamente.
 
 ## 0.24.2 (2026-07-15)
 
-### Features
+### Funcionalidades
 
-- Add a builtin `/check-kimi-code-docs` skill that automatically answers Kimi Code product questions with official-docs sources.
+- Adicionar a skill integrada `/check-kimi-code-docs`, que responde automaticamente a perguntas sobre o produto Kimi Code usando fontes da documentação oficial.
 
-### Polish
+### Melhorias
 
-- Align `kimi -p` behavior across engines: `print_background_mode` and `print_max_turns` now apply, and `/goal` runs stay alive until the goal finishes.
-- `kimi -p` now stays alive by default while background tasks are pending, with no effective wait or turn limit, and feeds each completion back to the agent. Set `print_background_mode = "exit"` or `"drain"` to restore the old exit-after-one-turn behavior.
-- `kimi -p` background tasks and subagents no longer time out by default (interactive mode is unchanged); restore limits with `[background] bash_task_timeout_s` or `[subagent] timeout_ms`.
-- Subagent timeout now defaults to 2 hours everywhere; override with `[subagent] timeout_ms` or `KIMI_SUBAGENT_TIMEOUT_MS`.
-- The per-step LLM retry limit is raised from 3 to 10 attempts, so transient provider failures (429 / overload) are retried before a turn fails; tune with `loop_control.max_retries_per_step`.
-- Workspaces now stay in sync: new sessions register automatically, missing workspaces are restored at startup, and removed ones stay removed.
-- `kimi web` now logs failed requests and key operations so daemon issues are easier to diagnose.
-- web: AgentSwarm cards now stay expanded while subagents are still running.
-- web: Minimized plan review and question cards now use an upward chevron for expand.
+- Alinhar o comportamento do `kimi -p` entre os diferentes engines: `print_background_mode` e `print_max_turns` agora são aplicados, e execuções de `/goal` permanecem ativas até que o objetivo seja concluído.
+- O `kimi -p` agora permanece ativo por padrão enquanto houver tarefas em segundo plano pendentes, sem limite efetivo de espera ou de turnos, e envia cada conclusão de volta ao agente. Defina `print_background_mode = "exit"` ou `"drain"` para restaurar o comportamento antigo de sair após um único turno.
+- As tarefas em segundo plano e os subagentes do `kimi -p` não atingem mais o tempo limite por padrão (o modo interativo permanece inalterado); restaure os limites com `[background] bash_task_timeout_s` ou `[subagent] timeout_ms`.
+- O tempo limite de subagentes agora é de 2 horas por padrão em todos os modos; substitua esse valor com `[subagent] timeout_ms` ou `KIMI_SUBAGENT_TIMEOUT_MS`.
+- O limite de novas tentativas do LLM por etapa foi aumentado de 3 para 10 tentativas, para que falhas temporárias do provedor (429 / sobrecarga) sejam novamente tentadas antes que um turno falhe; ajuste com `loop_control.max_retries_per_step`.
+- Os workspaces agora permanecem sincronizados: novas sessões são registradas automaticamente, workspaces ausentes são restaurados na inicialização e os removidos permanecem removidos.
+- O `kimi web` agora registra solicitações que falharam e operações importantes, facilitando o diagnóstico de problemas do daemon.
+- web: Os cartões do AgentSwarm agora permanecem expandidos enquanto os subagentes ainda estão em execução.
+- web: Os cartões minimizados de revisão do plano e de perguntas agora usam um chevron apontando para cima para expandir.
 
-### Bug Fixes
+### Correções de bugs
 
-- web: Fix mobile layout on iOS, including the composer, safe areas, and toasts.
-- Fix new sessions not opening in older CLI versions.
-- Fix completion notifications firing early when a subagent finished while the main turn was still running.
-- Fix the web UI showing the wrong CLI version.
-- Fix Gemini tool call IDs colliding across turns and merging swarm runs into one card.
-- web: Show server error details when actions like stopping or archiving a session fail.
-- web: Fix long responses stalling after the tab was backgrounded.
-- web: Fix code block copy buttons over plain HTTP.
-- web: Keep loaded sessions visible when the session list fails to reload.
-- web: Restore the AgentSwarm member list after a page refresh.
-- web: Fix session titles not generating when the first message is a slash command.
-- web: Show each message's actual send time after reloading a session.
-- Fix several goal-mode issues around budgets and turn limits, pausing and resuming, crash recovery, final status messages, and invalid persisted goal records.
-- Fix replaced goals being able to affect the new goal's budget, and reject subagent goals consistently.
-- Correct the guidance shown when a goal cannot be paused or resumed.
+- web: Corrigir o layout em dispositivos móveis no iOS, incluindo o compositor, as áreas seguras e as notificações.
+- Corrigir novas sessões que não eram abertas em versões mais antigas da CLI.
+- Corrigir notificações de conclusão que eram disparadas antecipadamente quando um subagente terminava enquanto o turno principal ainda estava em execução.
+- Corrigir a interface web que exibia a versão incorreta da CLI.
+- Corrigir IDs de chamadas de ferramentas do Gemini que colidiam entre turnos e faziam com que execuções do swarm fossem mescladas em um único cartão.
+- web: Exibir detalhes do erro do servidor quando ações como interromper ou arquivar uma sessão falham.
+- web: Corrigir respostas longas que ficavam travadas após a aba ser colocada em segundo plano.
+- web: Corrigir os botões de cópia de blocos de código em conexões HTTP simples.
+- web: Manter as sessões carregadas visíveis quando a lista de sessões falha ao ser recarregada.
+- web: Restaurar a lista de membros do AgentSwarm após recarregar a página.
+- web: Corrigir títulos de sessão que não eram gerados quando a primeira mensagem era um comando slash.
+- web: Exibir o horário real de envio de cada mensagem após recarregar uma sessão.
+- Corrigir vários problemas do modo de objetivos relacionados a orçamentos e limites de turnos, pausa e retomada, recuperação após falhas, mensagens de status finais e registros de objetivos persistidos inválidos.
+- Corrigir objetivos substituídos que podiam afetar o orçamento do novo objetivo e rejeitar objetivos de subagentes de forma consistente.
+- Corrigir as orientações exibidas quando um objetivo não pode ser pausado ou retomado.
 
-### Refactors
+### Refatorações
 
-- Rename the dynamic tool loading capability from `select_tools` to `dynamically_loaded_tools`; behavior is unchanged.
+- Renomear o recurso de carregamento dinâmico de ferramentas de `select_tools` para `dynamically_loaded_tools`; o comportamento permanece inalterado.
 
 ## 0.24.1 (2026-07-14)
 
-### Bug Fixes
+### Correções de bugs
 
-- Fix Kimi sessions getting stuck when preserved-thinking history contains an empty reasoning step.
-- Fix built-in tools being unavailable when the model provider becomes ready after the session starts.
-- Fix Thinking effort routing: non-Kimi providers now preserve configured values, while Kimi models validate runtime selections and fall back safely during model resolution.
-- web: Align thinking-level handling with the CLI: submit the selected level verbatim instead of silently downgrading it, fall back to the model's own default when nothing was chosen or the model switches, and persist explicit picks as the default for new sessions.
-- Preserve goal completion summaries and show untyped LLM errors without an internal error-code prefix in step interruption events.
+- Corrigir sessões do Kimi que ficavam travadas quando o histórico com thinking preservado continha uma etapa de raciocínio vazia.
+- Corrigir ferramentas integradas que ficavam indisponíveis quando o provedor do modelo ficava pronto após o início da sessão.
+- Corrigir o roteamento do thinking effort: provedores que não são Kimi agora preservam os valores configurados, enquanto modelos Kimi validam as seleções em tempo de execução e usam um fallback seguro durante a resolução do modelo.
+- web: Alinhar o tratamento dos níveis de thinking com a CLI: enviar o nível selecionado exatamente como definido, em vez de reduzi-lo silenciosamente; usar o padrão do próprio modelo quando nada for selecionado ou quando o modelo mudar; e persistir as escolhas explícitas como padrão para novas sessões.
+- Preservar os resumos de conclusão de objetivos e exibir erros do LLM sem tipo, sem o prefixo de código de erro interno nos eventos de interrupção de etapas.
 
-### Polish
+### Melhorias
 
-- web: Show just the level name (e.g. Max) in the model pill instead of "thinking: max".
+- web: Exibir apenas o nome do nível (por exemplo, Max) no indicador do modelo, em vez de "thinking: max".
 
 ## 0.24.0 (2026-07-14)
 
-### Features
+### Funcionalidades
 
-- web: Add session export: run `/export` or pick Export session from a session's more menu to download the session and troubleshooting logs as a ZIP (limited to 64 MiB).
-- Move foreground Bash commands that hit their timeout to the background instead of killing them, so long-running commands survive the timeout and report back on completion. Set `bash_auto_background_on_timeout = false` under `[background]` in config.toml to restore the kill-on-timeout behavior.
+- web: Adicionar a exportação de sessões: execute `/export` ou selecione Export session no menu de opções de uma sessão para baixar a sessão e os logs de diagnóstico como um arquivo ZIP (limitado a 64 MiB).
+- Mover comandos Bash executados em primeiro plano que atingirem o tempo limite para segundo plano, em vez de encerrá-los, para que comandos de longa duração continuem sendo executados e informem o resultado quando forem concluídos. Defina `bash_auto_background_on_timeout = false` em `[background]` no config.toml para restaurar o comportamento de encerrar o comando ao atingir o tempo limite.
 
-### Polish
+### Melhorias
 
-- web: Refine goal mode controls with animated strip interactions, budget-aware progress, and design-system cancellation confirmation.
-- On session close, background tasks are now asked to stop and given a grace period before being force-stopped.
-- Rewrite repeated-tool-call reminders to redirect the agent toward a different action instead of prohibiting the call.
-- Optimize the TaskOutput tool prompts to discourage blocking waits on background tasks.
-- Send the kimi-code-cli User-Agent on provider registry (api.json) and model catalog fetches, so registries can identify the client version.
-- Log a warning when a skill fails to parse instead of silently dropping it, and fix skill scan results not being reported.
+- web: Refinar os controles do modo de objetivos com interações animadas na faixa, progresso com base no orçamento e confirmação de cancelamento seguindo o sistema de design.
+- Ao fechar uma sessão, as tarefas em segundo plano agora recebem uma solicitação para serem interrompidas e um período de tolerância antes de serem encerradas à força.
+- Reescrever os lembretes de chamadas repetidas de ferramentas para direcionar o agente a uma ação diferente, em vez de proibir a chamada.
+- Otimizar os prompts da ferramenta TaskOutput para desencorajar esperas bloqueantes por tarefas em segundo plano.
+- Enviar o User-Agent `kimi-code-cli` nas solicitações ao registro de provedores (`api.json`) e ao catálogo de modelos, para que os registros possam identificar a versão do cliente.
+- Registrar um aviso quando uma skill falhar ao ser analisada, em vez de descartá-la silenciosamente, e corrigir os resultados da verificação de skills que não eram reportados.
 
-### Bug Fixes
+### Correções de bugs
 
-- Prevent oversized image reads from poisoning sessions; sessions that already failed with request-too-large errors now recover automatically.
-- Fix session fork losing everything except the conversation log: forked sessions now carry over media attachments, plan files, background task output, and cron tasks, and a failed fork no longer leaves a broken copy behind.
-- web: Fix several session rendering glitches when reopening, reconnecting, or resyncing a session, including the context usage indicator dropping to 0, duplicate user message bubbles, and duplicated text in multi-step turns.
-- web: Fix uploaded images failing to display when connecting to the server over a non-localhost address.
-- web: Continue blocked goals after the user resumes them from the goal controls.
-- web: Fix the AgentSwarm member list disappearing after a page refresh while subagents are still running.
-- web: Fix the goal card disappearing after a page refresh while a session goal is active.
-- web: Fix the workspace picker menu sizing too narrowly for its content.
-- web: Recover transient subagent rate limits without surfacing them as session errors.
-- Fix Bash auto-detection on Windows failing when git comes from a native MSYS2 toolchain (ucrt64/clang64/clangarm64).
-- Fix OAuth login hanging after browser authorization when the provider configuration changes during sign-in.
-- Show the provider's actual rejection message instead of a misleading re-login prompt when an OAuth-managed model keeps returning 401 after a token refresh.
-- Fix providers without a configured `base_url` being rejected: anthropic/openai and other protocol providers now fall back to their official default endpoints again.
-- Fix MCP tools being unavailable on the first turn after session startup.
-- Fix pasted media and images being dropped from `/skill` and plugin command arguments, and when steering with `Ctrl-S`.
-- Fix empty reasoning blocks being dropped across providers, which broke multi-step tool calls.
-- In auto permission mode, plan exits are now marked as auto-approved instead of user-reviewed, so the agent no longer mistakes the approval for a user signal to start executing.
-- Fix background tasks being lost or wrongly marked as lost when resuming sessions.
-- Fix server shutdown sometimes leaving a stale instance file behind.
+- Impedir que leituras de imagens grandes demais prejudiquem as sessões; sessões que já falharam com erros de solicitação grande demais agora são recuperadas automaticamente.
+- Corrigir o fork de sessões que perdia tudo, exceto o histórico da conversa: sessões derivadas agora carregam anexos de mídia, arquivos de plano, saída de tarefas em segundo plano e tarefas cron, e um fork com falha não deixa mais uma cópia corrompida para trás.
+- web: Corrigir vários problemas de renderização de sessões ao reabri-las, reconectá-las ou ressincronizá-las, incluindo o indicador de uso do contexto que caía para 0, balões de mensagens do usuário duplicados e texto duplicado em turnos com várias etapas.
+- web: Corrigir imagens enviadas que não eram exibidas ao conectar-se ao servidor por um endereço diferente de localhost.
+- web: Continuar objetivos bloqueados depois que o usuário os retoma pelos controles de objetivos.
+- web: Corrigir a lista de membros do AgentSwarm que desaparecia após atualizar a página enquanto os subagentes ainda estavam em execução.
+- web: Corrigir o cartão de objetivo que desaparecia após atualizar a página enquanto um objetivo da sessão estava ativo.
+- web: Corrigir o menu do seletor de workspace que ficava estreito demais para seu conteúdo.
+- web: Recuperar limites de taxa temporários de subagentes sem exibi-los como erros da sessão.
+- Corrigir a detecção automática do Bash no Windows que falhava quando o Git vinha de uma toolchain nativa do MSYS2 (ucrt64/clang64/clangarm64).
+- Corrigir o login OAuth que ficava travado após a autorização no navegador quando a configuração do provedor mudava durante o login.
+- Exibir a mensagem real de rejeição do provedor, em vez de um aviso enganoso para fazer login novamente, quando um modelo gerenciado por OAuth continua retornando 401 após uma atualização do token.
+- Corrigir provedores sem `base_url` configurada que eram rejeitados: provedores dos protocolos anthropic/openai e outros agora voltam a usar seus endpoints oficiais padrão.
+- Corrigir ferramentas MCP que ficavam indisponíveis no primeiro turno após a inicialização da sessão.
+- Corrigir mídias e imagens coladas que eram descartadas dos argumentos de comandos de `/skill` e plugins, e ao enviar instruções com `Ctrl-S`.
+- Corrigir blocos de raciocínio vazios que eram descartados entre provedores, o que quebrava chamadas de ferramentas em várias etapas.
+- No modo de permissão automático, saídas do plano agora são marcadas como aprovadas automaticamente, em vez de revisadas pelo usuário, para que o agente não confunda a aprovação com um sinal do usuário para começar a executar.
+- Corrigir tarefas em segundo plano que eram perdidas ou marcadas incorretamente como perdidas ao retomar sessões.
+- Corrigir o encerramento do servidor que, em alguns casos, deixava para trás um arquivo de instância obsoleto.
 
-### Refactors
+### Refatorações
 
-- `kimi web` now runs on the reworked agent engine by default.
+- O `kimi web` agora é executado por padrão no mecanismo de agente reformulado.
 
 ## 0.23.6 (2026-07-12)
 
