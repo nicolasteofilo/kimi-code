@@ -888,618 +888,618 @@ Baixa um arquivo de mídia de prompt (uma imagem ou outro anexo referenciado pel
 | `session_id` | path | string | **Obrigatório.** Id da sessão |
 | `file_id` | path | string | **Obrigatório.** Id do arquivo de mídia |
 
-### Messages and transcript
+### Mensagens e transcrição
 
-The `messages` endpoints page the main agent's flattened message history, while the `transcript` endpoints serve the structured per-agent transcript — turns, tasks, interactions, attachments — that the WebSocket [Transcript protocol](#transcript-protocol) streams live. Use these endpoints for history paging and catch-up, and the WebSocket subscription for the live tail.
+Os endpoints `messages` paginam o histórico de mensagens achatado (flattened) do agente principal, enquanto os endpoints `transcript` servem a transcrição estruturada por agente — turnos, tarefas, interações, anexos — que o [Protocolo de Transcrição](#protocolo-de-transcrição) do WebSocket transmite em tempo real. Use esses endpoints para paginação de histórico e atualização (catch-up), e a assinatura WebSocket para a cauda (tail) em tempo real.
 
-| Method and path | Description |
+| Método e caminho | Descrição |
 | --- | --- |
-| `GET /api/v1/sessions/{session_id}/messages` | Page messages (`before_id` / `after_id` / `role`) |
-| `GET /api/v1/sessions/{session_id}/messages/{message_id}` | Read one message |
-| `GET /api/v1/sessions/{session_id}/transcript` | Turn-paged transcript (requires `agent_id`); global state rides along unpaginated |
-| `GET /api/v1/sessions/{session_id}/transcript/ops` | Op-batch catch-up (`since_seq`); `complete: false` means a full refresh is needed |
-| `GET /api/v1/sessions/{session_id}/transcript/user-messages` | Turn-opening user inputs, unpaginated |
-| `GET /api/v1/sessions/{session_id}/transcript/plan` | ExitPlanMode plan content, path, and review outcome |
+| `GET /api/v1/sessions/{session_id}/messages` | Paginar mensagens (`before_id` / `after_id` / `role`) |
+| `GET /api/v1/sessions/{session_id}/messages/{message_id}` | Ler uma mensagem |
+| `GET /api/v1/sessions/{session_id}/transcript` | Transcrição paginada por turno (requer `agent_id`); o estado global viaja junto, sem paginação |
+| `GET /api/v1/sessions/{session_id}/transcript/ops` | Atualização (catch-up) por lote de operações (op-batch) (`since_seq`); `complete: false` significa que um refresh completo é necessário |
+| `GET /api/v1/sessions/{session_id}/transcript/user-messages` | Entradas de usuário que abrem turno, sem paginação |
+| `GET /api/v1/sessions/{session_id}/transcript/plan` | Conteúdo, caminho (path) e resultado da revisão do plano no modo ExitPlanMode |
 
 #### `GET /api/v1/sessions/{session_id}/messages`
 
-Pages the main agent's message history — the flattened context transcript shared with the session snapshot — newest first. Cursor pagination follows [Pagination](#pagination); reading the history resumes the session when it is cold.
+Pagina o histórico de mensagens do agente principal — a transcrição de contexto achatada compartilhada com o snapshot da sessão — as mais recentes primeiro. A paginação por cursor segue a [Paginação](#paginação); ler o histórico retoma a sessão quando ela está fria.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `before_id` | query | string | Only messages older than this message id; mutually exclusive with `after_id` |
-| `after_id` | query | string | Only messages newer than this message id; mutually exclusive with `before_id` |
-| `page_size` | query | integer | 1–100. Default `50` |
-| `role` | query | string | Keep only one role: `user` / `assistant` / `tool` / `system`. The filter applies after the page is sliced, so a filtered page can hold fewer than `page_size` items while `has_more` is still `true` — keep paging until `has_more` is `false` |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `before_id` | query | string | Apenas mensagens mais antigas que este id de mensagem; mutuamente exclusivo com `after_id` |
+| `after_id` | query | string | Apenas mensagens mais novas que este id de mensagem; mutuamente exclusivo com `before_id` |
+| `page_size` | query | integer | 1–100. Padrão `50` |
+| `role` | query | string | Manter apenas uma role: `user` / `assistant` / `tool` / `system`. O filtro é aplicado após a página ser fatiada, de modo que uma página filtrada pode conter menos itens que o `page_size` enquanto `has_more` ainda for `true` — continue paginando até `has_more` ser `false` |
 
-On success, `data` is `{ items, has_more }` where each item is a message object `{ id, session_id, role, content, created_at, prompt_id?, parent_message_id?, metadata? }`; `content` is an array of content parts in the wire format documented under [Prompts](#prompts) (`text`, `tool_use`, `tool_result`, `image`, `video`, `file`, `thinking`).
+Em caso de sucesso, `data` é `{ items, has_more }` onde cada item é um objeto de mensagem `{ id, session_id, role, content, created_at, prompt_id?, parent_message_id?, metadata? }`; `content` é um array de partes de conteúdo no formato de transporte documentado em [Prompts](#prompts) (`text`, `tool_use`, `tool_result`, `image`, `video`, `file`, `thinking`).
 
-- `40001`: validation failure — for example `before_id` combined with `after_id`
-- `40401`: session not found
+- `40001`: falha de validação — por exemplo `before_id` combinado com `after_id`
+- `40401`: sessão não encontrada
 
 #### `GET /api/v1/sessions/{session_id}/messages/{message_id}`
 
-Reads one message from the same history by id.
+Lê uma mensagem a partir do mesmo histórico através do id.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `message_id` | path | string | **Required.** Message id |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `message_id` | path | string | **Obrigatório.** Id da mensagem |
 
-On success, `data` is the message object in the item shape documented under `GET /api/v1/sessions/{session_id}/messages` above.
+Em caso de sucesso, `data` é o objeto de mensagem no formato de item documentado em `GET /api/v1/sessions/{session_id}/messages` acima.
 
-- `40401`: session not found
-- `40403`: no message with that id in this session
+- `40401`: sessão não encontrada
+- `40403`: não existe mensagem com esse id nesta sessão
 
 #### `GET /api/v1/sessions/{session_id}/transcript`
 
-Returns one page of an agent's structured transcript: turns (with their steps and frames) plus the markers and task references between them. Live sessions answer from the in-memory store (the requested agent's persisted history is backfilled first); cold sessions rebuild the agent from the persisted wire records. This is the history half of the transcript surface — the live streaming half is the [Transcript protocol](#transcript-protocol) subscription.
+Retorna uma página da transcrição estruturada de um agente: turnos (com seus passos e quadros) mais os marcadores e referências a tarefas entre eles. Sessões ativas (live) respondem a partir do armazenamento em memória (o histórico persistido do agente requisitado é preenchido/backfilled primeiro); sessões frias reconstróem o agente a partir dos registros de transporte persistidos. Esta é a metade de histórico da superfície de transcrição — a metade de streaming ao vivo é a assinatura do [Protocolo de Transcrição](#protocolo-de-transcrição).
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `agent_id` | query | string | **Required.** Agent whose transcript to read; must be a plain agent id (letters, digits, `.`, `_`, `-` — no path separators) |
-| `before_turn` | query | string | Only turns older than this turn id; mutually exclusive with `after_turn` |
-| `after_turn` | query | string | Only turns newer than this turn id; mutually exclusive with `before_turn` |
-| `page_size` | query | integer | 1–100 turns. Default `20` |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `agent_id` | query | string | **Obrigatório.** Agente cuja transcrição se quer ler; deve ser um id de agente simples (letras, dígitos, `.`, `_`, `-` — sem separadores de caminho) |
+| `before_turn` | query | string | Apenas turnos mais antigos que este id de turno; mutuamente exclusivo com `after_turn` |
+| `after_turn` | query | string | Apenas turnos mais novos que este id de turno; mutuamente exclusivo com `before_turn` |
+| `page_size` | query | integer | 1–100 turnos. Padrão `20` |
 
-The page unit is the turn: without a cursor the newest page is returned, and `has_more` reports that older turns remain. On success, `data` is `{ agent_id, items, has_more, tasks, interactions, attachments, todos, meta, agents, pending_interactions, seq? }` — `items` is the paged turn slice, `tasks` / `interactions` / `attachments` / `todos` / `meta` / `agents` / `pending_interactions` are global agent state that ships unpaginated with every response, and `seq` is the agent's op-batch watermark for resuming the stream (live sessions only).
+A unidade de página é o turno: sem um cursor a página mais nova é retornada, e `has_more` informa se há turnos mais antigos restantes. Em caso de sucesso, `data` é `{ agent_id, items, has_more, tasks, interactions, attachments, todos, meta, agents, pending_interactions, seq? }` — `items` é a fatia paginada de turnos, `tasks` / `interactions` / `attachments` / `todos` / `meta` / `agents` / `pending_interactions` são o estado global do agente que viaja sem paginação em cada resposta, e `seq` é a marca d'água de lote de operações (op-batch) do agente para retomar o stream (apenas sessões ativas).
 
-- `40001`: validation failure — `before_turn` combined with `after_turn`, or a non-plain `agent_id`
-- `40401`: session not found
+- `40001`: falha de validação — `before_turn` combinado com `after_turn`, ou um `agent_id` não simples
+- `40401`: sessão não encontrada
 
 #### `GET /api/v1/sessions/{session_id}/transcript/ops`
 
-Serves point-to-point catch-up from the server's op journal: the journaled op batches with `seq > since_seq` for one agent, oldest first. It is the REST counterpart of the `transcript_since` resume cursor described in [Transcript protocol](#transcript-protocol) and shares the same bounded journal, so the same fallback rule applies.
+Serve à atualização de ponto a ponto (point-to-point catch-up) a partir do journal de operações do servidor: os lotes de operações do journal com `seq > since_seq` para um agente, do mais antigo ao mais novo. É o equivalente REST do cursor de retomada `transcript_since` descrito em [Protocolo de Transcrição](#protocolo-de-transcrição) e compartilha o mesmo journal limitado, então a mesma regra de fallback se aplica.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `agent_id` | query | string | **Required.** Agent id (plain id, same constraint as the transcript endpoint) |
-| `since_seq` | query | integer | **Required.** The caller's last applied op-batch seq, minimum `0`; batches above it are returned |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `agent_id` | query | string | **Obrigatório.** Id do agente (id simples, mesma restrição que o endpoint de transcrição) |
+| `since_seq` | query | integer | **Obrigatório.** A última seq de op-batch aplicada pelo chamador, mínimo `0`; os lotes acima dela são retornados |
 
-On success, `data` is `{ agent_id, batches, latest_seq, complete }`, each batch `{ seq, ops }`. `complete: true` means every batch up to `latest_seq` is present; `complete: false` means the journal no longer reaches back to `since_seq` (or the session is not live at all), and the caller must fall back to a full `GET .../transcript` refresh.
+Em caso de sucesso, `data` é `{ agent_id, batches, latest_seq, complete }`, cada lote `{ seq, ops }`. `complete: true` significa que todos os lotes até `latest_seq` estão presentes; `complete: false` significa que o journal não alcança mais o `since_seq` (ou a sessão não está de forma alguma ativa), e o chamador deve fazer o fallback para um refresh completo por `GET .../transcript`.
 
-- `40001`: validation failure
-- `40401`: session not found
+- `40001`: falha de validação
+- `40401`: sessão não encontrada
 
 #### `GET /api/v1/sessions/{session_id}/transcript/user-messages`
 
-Lists every turn-opening input of the session, grouped per agent and unpaginated: real user text, user-slash skill and plugin commands, and cron prompts — distinguishable via `origin` — plus attachment-only prompts projected with an empty `prompt`. Attachment entities referenced by the listed messages ride along (metadata only, never bytes).
+Lista todas as entradas da sessão que iniciam turnos, agrupadas por agente e sem paginação: texto real de usuário, comandos slash user para habilidades e plugins, e prompts cron — distinguíveis via `origin` — mais prompts que possuem apenas anexo e são projetados com um `prompt` vazio. Entidades de anexo referenciadas pelas mensagens listadas viajam junto (apenas metadados, nunca os bytes).
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `agent_id` | query | string | Read one agent only (plain id). Default reads every rostered agent |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `agent_id` | query | string | Ler apenas um agente (id simples). O padrão lê todos os agentes na lista |
 
-On success, `data` is `{ agents }` where each entry is `{ agent_id, messages, attachments }`; a message is `{ turn_id, ordinal, state, origin, prompt, attachment_ids?, started_at? }` with `state` the turn state (`queued` / `running` / `completed` / `failed` / `cancelled`).
+Em caso de sucesso, `data` é `{ agents }` onde cada entrada é `{ agent_id, messages, attachments }`; uma mensagem é `{ turn_id, ordinal, state, origin, prompt, attachment_ids?, started_at? }` com `state` sendo o estado do turno (`queued` / `running` / `completed` / `failed` / `cancelled`).
 
-- `40001`: validation failure — a non-plain `agent_id`
-- `40401`: session not found
+- `40001`: falha de validação — um `agent_id` não simples
+- `40401`: sessão não encontrada
 
 #### `GET /api/v1/sessions/{session_id}/transcript/plan`
 
-Reads the plan information of an agent's `ExitPlanMode` tool calls — plan content, plan file path, offered options, and the review outcome — in timeline order. Content is projected from the first available fact: the linked approval interaction (interactive reviews), the live tool frame's display (auto mode), or the tool result output text; each entry records which one in `source`.
+Lê as informações de plano das chamadas da ferramenta `ExitPlanMode` de um agente — conteúdo do plano, caminho do arquivo do plano, opções oferecidas e o resultado da revisão — em ordem cronológica. O conteúdo é projetado a partir do primeiro fato disponível: a interação de aprovação vinculada (revisões interativas), a exibição do quadro da ferramenta em tempo real (modo automático), ou o texto de saída do resultado da ferramenta; cada entrada registra qual deles em `source`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `agent_id` | query | string | **Required.** Agent id (plain id) |
-| `tool_call_id` | query | string | Narrow the read to one `ExitPlanMode` call; absent lists every call with recoverable plan content |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `agent_id` | query | string | **Obrigatório.** Id do agente (id simples) |
+| `tool_call_id` | query | string | Restringir a leitura a uma chamada de `ExitPlanMode`; ausente lista todas as chamadas com conteúdo de plano recuperável |
 
-On success, `data` is `{ agent_id, plans }` where each plan is `{ tool_call_id, turn_id, source, plan, path?, options?, review? }`: `source` is `interaction` / `display` / `output`, `options` are the review choices as `{ label, description? }`, and `review` (present only for interactive reviews) is `{ state, selected_option?, feedback? }` with `state` one of `pending` / `approved` / `rejected` / `cancelled`.
+Em caso de sucesso, `data` é `{ agent_id, plans }` onde cada plano é `{ tool_call_id, turn_id, source, plan, path?, options?, review? }`: `source` é `interaction` / `display` / `output`, `options` são as escolhas de revisão como `{ label, description? }`, e `review` (presente apenas para revisões interativas) é `{ state, selected_option?, feedback? }` com `state` sendo um de `pending` / `approved` / `rejected` / `cancelled`.
 
-- `40001`: validation failure
-- `40401`: session not found
-- `40416`: `tool_call_id` given, but no `ExitPlanMode` call with that id exists
+- `40001`: falha de validação
+- `40401`: sessão não encontrada
+- `40416`: `tool_call_id` fornecido, mas não existe nenhuma chamada de `ExitPlanMode` com esse id
 
 ### Prompts
 
-A prompt is one unit of user input: submitting one enqueues it on the session's main agent (or a named agent), a queued prompt can be steered into the active turn, and a running prompt can be aborted. Turn progress itself streams over the WebSocket [events](#events), not these endpoints.
+Um prompt é uma unidade de entrada do usuário: enviar um o enfileira no agente principal da sessão (ou em um agente nomeado), um prompt enfileirado pode ser direcionado (steered) para o turno ativo, e um prompt em execução pode ser abortado. O progresso do turno em si é transmitido por streaming pelos [eventos](#eventos) do WebSocket, não por esses endpoints.
 
-| Method and path | Description |
+| Método e caminho | Descrição |
 | --- | --- |
-| `GET /api/v1/sessions/{session_id}/prompts` | Active and queued prompts |
-| `POST /api/v1/sessions/{session_id}/prompts` | Submit a prompt (content-part array, optional model / permission-mode overrides) |
-| `POST /api/v1/sessions/{session_id}/prompts:steer` | Steer queued prompts into the active turn |
-| `POST /api/v1/sessions/{session_id}/prompts/{prompt_id}:abort` | Abort a running prompt |
-| `POST /api/v1/sessions/{session_id}/prompts/{prompt_id}:steer` | Steer one queued prompt |
+| `GET /api/v1/sessions/{session_id}/prompts` | Prompts ativos e enfileirados |
+| `POST /api/v1/sessions/{session_id}/prompts` | Enviar um prompt (array content-part, substituições opcionais de modelo / modo de permissão) |
+| `POST /api/v1/sessions/{session_id}/prompts:steer` | Direcionar prompts enfileirados para o turno ativo |
+| `POST /api/v1/sessions/{session_id}/prompts/{prompt_id}:abort` | Abortar um prompt em execução |
+| `POST /api/v1/sessions/{session_id}/prompts/{prompt_id}:steer` | Direcionar um prompt enfileirado |
 
 #### `GET /api/v1/sessions/{session_id}/prompts`
 
-Reads the main agent's prompt queue snapshot.
+Lê um snapshot da fila de prompts do agente principal.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
 
-On success, `data` is `{ active, queued }`: `active` is the running prompt (`null` when idle) and `queued` lists the pending prompts in order. A prompt is `{ prompt_id, user_message_id, status, content, created_at }` with `status` one of `running` / `queued` / `blocked` and `content` in the content-part format accepted by `POST /api/v1/sessions/{session_id}/prompts`.
+Em caso de sucesso, `data` é `{ active, queued }`: `active` é o prompt em execução (`null` quando ocioso) e `queued` lista os prompts pendentes em ordem. Um prompt é `{ prompt_id, user_message_id, status, content, created_at }` com `status` sendo um de `running` / `queued` / `blocked` e `content` no formato content-part aceito por `POST /api/v1/sessions/{session_id}/prompts`.
 
-- `40401`: session not found
+- `40401`: sessão não encontrada
 
 #### `POST /api/v1/sessions/{session_id}/prompts`
 
-Submits a user prompt to the session. Media references are validated first, then the optional overrides are applied to the target agent — `profile` (bound together with `model` / `thinking`), then `model`, `thinking`, `permission_mode`, and `disabled_tools` — and the prompt is enqueued; the response returns as soon as the prompt is accepted, without waiting for the turn. With `skills`, the prompt runs as a bundled skill activation instead of a plain user prompt.
+Envia um prompt de usuário para a sessão. Referências a mídias são validadas primeiro, depois as substituições opcionais são aplicadas ao agente alvo — `profile` (vinculado junto com `model` / `thinking`), então `model`, `thinking`, `permission_mode`, e `disabled_tools` — e o prompt é enfileirado; a resposta retorna assim que o prompt é aceito, sem esperar pelo turno. Com `skills`, o prompt é executado como uma ativação de skill empacotada (bundled) em vez de um prompt de usuário simples.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `content` | body | array | **Required.** Non-empty array of content parts; variants below |
-| `agent_id` | body | string | Target agent. Default the main agent |
-| `prompt_id` | body | string | Client-chosen prompt id for idempotent submission; an id already reserved by an in-flight prompt fails `40927`, one that has already completed fails `40903`. Cannot be combined with `skills` |
-| `skills` | body | array | Bundled skill activations, at least 1 entry of `{ name, args? }`; every skill must exist and be user-activatable |
-| `profile` | body | string | Agent profile to bind before submitting |
-| `model` | body | string | Model alias to switch the agent to |
-| `thinking` | body | string | Thinking-mode effort level |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `content` | body | array | **Obrigatório.** Array não vazio de partes de conteúdo (content parts); variantes abaixo |
+| `agent_id` | body | string | Agente alvo. Padrão: o agente principal |
+| `prompt_id` | body | string | Id do prompt escolhido pelo cliente para envio idempotente; um id já reservado por um prompt in-flight (em andamento) falha com `40927`, um que já foi concluído falha com `40903`. Não pode ser combinado com `skills` |
+| `skills` | body | array | Ativações de skills empacotadas (bundled), pelo menos 1 entrada de `{ name, args? }`; toda skill deve existir e ser ativável pelo usuário |
+| `profile` | body | string | Perfil de agente a ser vinculado antes do envio |
+| `model` | body | string | Alias do modelo para o qual trocar o agente |
+| `thinking` | body | string | Nível de esforço do modo Thinking |
 | `permission_mode` | body | string | `manual` / `yolo` / `auto` |
-| `disabled_tools` | body | array | Tool names to disable for the session |
+| `disabled_tools` | body | array | Nomes de ferramentas a serem desabilitadas para a sessão |
 
-The schema also accepts `metadata`, `plan_mode`, `swarm_mode`, `goal_objective`, and `goal_control`, but the submit route currently does not apply them. Each `content` part is an object discriminated by `type`:
+O schema também aceita `metadata`, `plan_mode`, `swarm_mode`, `goal_objective` e `goal_control`, mas a rota de envio (submit) atualmente não os aplica. Cada parte de `content` é um objeto discriminado por `type`:
 
-| Part | Fields | Description |
+| Parte | Campos | Descrição |
 | --- | --- | --- |
-| `text` | `text` | Plain text |
-| `image` / `video` | `source` | Media input; `source` is one of `{ kind: "url", url, id? }`, `{ kind: "base64", media_type, data }`, `{ kind: "file", file_id }` (an upload from `POST /api/v1/files`), or `{ kind: "session_media", file_id }` (media already committed to this session) |
-| `file` | `file_id`, `name`, `media_type`, `size` | A file attachment uploaded through `POST /api/v1/files` |
+| `text` | `text` | Texto simples |
+| `image` / `video` | `source` | Entrada de mídia; `source` é um de `{ kind: "url", url, id? }`, `{ kind: "base64", media_type, data }`, `{ kind: "file", file_id }` (um upload de `POST /api/v1/files`), ou `{ kind: "session_media", file_id }` (mídia já consolidada nesta sessão) |
+| `file` | `file_id`, `name`, `media_type`, `size` | Um anexo de arquivo enviado (uploaded) através de `POST /api/v1/files` |
 
-The schema also accepts the `tool_use`, `tool_result`, and `thinking` parts of the shared message format, but they are not meaningful in a user prompt. Unknown or mis-kinded `file_id` references are rejected before the prompt is created and before any override is applied.
+O schema também aceita as partes `tool_use`, `tool_result` e `thinking` do formato de mensagem compartilhado, mas elas não fazem sentido em um prompt de usuário. Referências `file_id` desconhecidas ou com kind incorreto são rejeitadas antes da criação do prompt e antes da aplicação de qualquer substituição (override).
 
-On success, `data` is the accepted prompt `{ prompt_id, user_message_id, status, content, created_at }`.
+Em caso de sucesso, `data` é o prompt aceito `{ prompt_id, user_message_id, status, content, created_at }`.
 
-- `40001`: validation failure — for example `prompt_id` combined with `skills`, or an unknown `profile`
-- `40110`: no provider configured yet — finish login first
-- `40111`: the resolved provider has no credential (`details.provider_id`)
-- `40112`: the provider's credential was rejected (`details.provider_id`)
-- `40113`: the model could not be resolved (`details.model_id` / `details.provider_id` when known)
-- `40401`: session not found
-- `40407`: a referenced `file_id` does not exist (or does not match the part's media kind)
-- `40415`: a `skills` entry names an unknown skill
-- `40903`: `prompt_id` belongs to an already-completed prompt; `data` carries `{ aborted: false }`
-- `40912`: the skill exists but cannot be activated by the user
-- `40927`: `prompt_id` is already reserved by an in-flight prompt
+- `40001`: falha de validação — por exemplo `prompt_id` combinado com `skills`, ou um `profile` desconhecido
+- `40110`: nenhum provedor configurado ainda — conclua o login primeiro
+- `40111`: o provedor resolvido não possui credencial (`details.provider_id`)
+- `40112`: a credencial do provedor foi rejeitada (`details.provider_id`)
+- `40113`: o modelo não pôde ser resolvido (`details.model_id` / `details.provider_id` quando conhecidos)
+- `40401`: sessão não encontrada
+- `40407`: um `file_id` referenciado não existe (ou não corresponde ao media kind da parte)
+- `40415`: uma entrada de `skills` nomeia uma skill desconhecida
+- `40903`: `prompt_id` pertence a um prompt já concluído; `data` carrega `{ aborted: false }`
+- `40912`: a skill existe mas não pode ser ativada pelo usuário
+- `40927`: `prompt_id` já está reservado por um prompt in-flight
 
 #### `POST /api/v1/sessions/{session_id}/prompts:steer`
 
-Steers queued prompts into the active turn, so the running turn consumes them immediately instead of finishing first.
+Direciona prompts enfileirados para o turno ativo, de modo que o turno em execução os consome imediatamente em vez de terminar primeiro.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `prompt_ids` | body | array | **Required.** Non-empty array of queued prompt ids |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `prompt_ids` | body | array | **Obrigatório.** Array não vazio de ids de prompts enfileirados |
 
-On success, `data` is `{ steered: true, prompt_ids }`.
+Em caso de sucesso, `data` é `{ steered: true, prompt_ids }`.
 
-- `40001`: validation failure
-- `40401`: session not found
-- `40402`: a listed prompt id is not in the queue
+- `40001`: falha de validação
+- `40401`: sessão não encontrada
+- `40402`: um id de prompt listado não está na fila
 
 #### `POST /api/v1/sessions/{session_id}/prompts/{prompt_id}:abort`
 
-Aborts a running prompt. This endpoint and `:steer` below dispatch through one route, `POST /api/v1/sessions/{session_id}/prompts/{tail}`: the tail is parsed as `{prompt_id}:{action}`, and a missing or unknown action fails `40001` (`unsupported action: ...`).
+Aborta um prompt em execução. Este endpoint e o `:steer` abaixo são despachados através de uma rota, `POST /api/v1/sessions/{session_id}/prompts/{tail}`: a parte final (tail) é analisada como `{prompt_id}:{action}`, e uma ação ausente ou desconhecida falha com `40001` (`unsupported action: ...`).
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `prompt_id` | path | string | **Required.** Prompt id |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `prompt_id` | path | string | **Obrigatório.** Id do prompt |
 
-On success, `data` is `{ aborted: true }`.
+Em caso de sucesso, `data` é `{ aborted: true }`.
 
-- `40401`: session not found
-- `40402`: no prompt with that id
-- `40903`: the prompt already completed; `data` carries `{ aborted: false }`
+- `40401`: sessão não encontrada
+- `40402`: não existe prompt com esse id
+- `40903`: o prompt já foi concluído; `data` carrega `{ aborted: false }`
 
 #### `POST /api/v1/sessions/{session_id}/prompts/{prompt_id}:steer`
 
-Steers one queued prompt into the active turn — the single-prompt form of `POST /api/v1/sessions/{session_id}/prompts:steer`.
+Direciona um prompt enfileirado para o turno ativo — a forma de prompt único de `POST /api/v1/sessions/{session_id}/prompts:steer`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `prompt_id` | path | string | **Required.** Queued prompt id |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `prompt_id` | path | string | **Obrigatório.** Id do prompt enfileirado |
 
-On success, `data` is `{ steered: true, prompt_ids: [prompt_id] }`.
+Em caso de sucesso, `data` é `{ steered: true, prompt_ids: [prompt_id] }`.
 
-- `40401`: session not found
-- `40402`: no queued prompt with that id
+- `40401`: sessão não encontrada
+- `40402`: nenhum prompt enfileirado com esse id
 
-### Approvals and questions
+### Aprovações e perguntas
 
-Approvals and questions are the session's two pending-interaction kinds: an approval asks permission for a tool call, a question asks for structured input with labeled options. These endpoints list and resolve them; new requests arrive over the WebSocket as `event.approval.requested` and `event.question.requested`.
+Aprovações e perguntas (approvals and questions) são os dois tipos de interações pendentes (pending-interaction) da sessão: uma aprovação pede permissão para uma chamada de ferramenta, uma pergunta pede uma entrada estruturada com opções rotuladas. Esses endpoints as listam e as resolvem; novas requisições chegam pelo WebSocket como `event.approval.requested` e `event.question.requested`.
 
-| Method and path | Description |
+| Método e caminho | Descrição |
 | --- | --- |
-| `GET /api/v1/sessions/{session_id}/approvals` | List pending approval requests (`status=pending` is required) |
-| `POST /api/v1/sessions/{session_id}/approvals/{approval_id}` | Resolve an approval |
-| `GET /api/v1/sessions/{session_id}/questions` | List pending questions (`status=pending` is required) |
-| `POST /api/v1/sessions/{session_id}/questions/{question_id}` | Answer a question |
-| `POST /api/v1/sessions/{session_id}/questions/{question_id}:dismiss` | Dismiss a question |
+| `GET /api/v1/sessions/{session_id}/approvals` | Listar requisições de aprovação pendentes (`status=pending` é obrigatório) |
+| `POST /api/v1/sessions/{session_id}/approvals/{approval_id}` | Resolver uma aprovação |
+| `GET /api/v1/sessions/{session_id}/questions` | Listar perguntas pendentes (`status=pending` é obrigatório) |
+| `POST /api/v1/sessions/{session_id}/questions/{question_id}` | Responder a uma pergunta |
+| `POST /api/v1/sessions/{session_id}/questions/{question_id}:dismiss` | Descartar (dismiss) uma pergunta |
 
 #### `GET /api/v1/sessions/{session_id}/approvals`
 
-Lists the session's pending approval requests — the permission prompts raised by tool calls. Reading the list resumes the session when it is cold.
+Lista as requisições de aprovação pendentes da sessão — os prompts de permissão gerados pelas chamadas de ferramentas. Ler a lista retoma a sessão quando ela está fria.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `status` | query | string | **Required.** Must be `pending` |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `status` | query | string | **Obrigatório.** Deve ser `pending` |
 
-On success, `data` is `{ items }` where each item is `{ approval_id, session_id, turn_id?, tool_call_id, tool_name, action, tool_input_display, created_at, expires_at }`: `tool_name` / `action` / `tool_input_display` describe the call waiting for permission, and `expires_at` is 24 hours after `created_at`.
+Em caso de sucesso, `data` é `{ items }` onde cada item é `{ approval_id, session_id, turn_id?, tool_call_id, tool_name, action, tool_input_display, created_at, expires_at }`: `tool_name` / `action` / `tool_input_display` descrevem a chamada aguardando permissão, e `expires_at` é 24 horas após `created_at`.
 
-- `40001`: `status` missing or not `pending`
-- `40401`: session not found
+- `40001`: `status` faltando ou não é `pending`
+- `40401`: sessão não encontrada
 
 #### `POST /api/v1/sessions/{session_id}/approvals/{approval_id}`
 
-Resolves a pending approval request, letting the waiting tool call proceed (or not).
+Resolve uma requisição de aprovação pendente, permitindo que a chamada de ferramenta que aguarda prossiga (ou não).
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `approval_id` | path | string | **Required.** Approval request id |
-| `decision` | body | string | **Required.** `approved` / `rejected` / `cancelled` |
-| `scope` | body | string | With `approved`, `session` (the only value) also remembers the approval rule for the rest of the session |
-| `feedback` | body | string | Free-form feedback handed back to the agent |
-| `selected_label` | body | string | The label of the chosen option, when the request offered labeled choices (for example a plan review) |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `approval_id` | path | string | **Obrigatório.** Id da requisição de aprovação |
+| `decision` | body | string | **Obrigatório.** `approved` / `rejected` / `cancelled` |
+| `scope` | body | string | Com `approved`, `session` (o único valor) também lembra da regra de aprovação pelo resto da sessão |
+| `feedback` | body | string | Feedback de formato livre (free-form) repassado de volta ao agente |
+| `selected_label` | body | string | O rótulo (label) da opção escolhida, quando a requisição ofereceu opções rotuladas (por exemplo, a revisão de um plano) |
 
-On success, `data` is `{ resolved: true, resolved_at }`.
+Em caso de sucesso, `data` é `{ resolved: true, resolved_at }`.
 
-- `40001`: validation failure
-- `40401`: session not found
-- `40404`: no pending approval with that id
-- `40902`: the approval was already resolved; `data` carries `{ resolved: false }`
+- `40001`: falha de validação
+- `40401`: sessão não encontrada
+- `40404`: nenhuma aprovação pendente com esse id
+- `40902`: a aprovação já foi resolvida; `data` carrega `{ resolved: false }`
 
 #### `GET /api/v1/sessions/{session_id}/questions`
 
-Lists the session's pending questions.
+Lista as perguntas pendentes da sessão.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `status` | query | string | **Required.** Must be `pending` |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `status` | query | string | **Obrigatório.** Deve ser `pending` |
 
-On success, `data` is `{ items }` where each item is `{ question_id, session_id, turn_id?, tool_call_id?, questions, created_at }`. `questions` holds 1–4 items `{ id, question, header?, body?, options, multi_select?, allow_other?, other_label?, other_description? }`, each with 2–4 `options` of `{ id, label, description? }`; `multi_select` allows several options, `allow_other` a free-text answer.
+Em caso de sucesso, `data` é `{ items }` onde cada item é `{ question_id, session_id, turn_id?, tool_call_id?, questions, created_at }`. `questions` contém de 1 a 4 itens `{ id, question, header?, body?, options, multi_select?, allow_other?, other_label?, other_description? }`, cada um com 2 a 4 `options` de `{ id, label, description? }`; `multi_select` permite várias opções, `allow_other` permite uma resposta em texto livre.
 
-- `40001`: `status` missing or not `pending`
-- `40401`: session not found
+- `40001`: `status` faltando ou não é `pending`
+- `40401`: sessão não encontrada
 
 #### `POST /api/v1/sessions/{session_id}/questions/{question_id}`
 
-Answers a pending question. Both question endpoints dispatch through one route, `POST /api/v1/sessions/{session_id}/questions/{tail}`: a bare question id answers the question, a `{question_id}:dismiss` tail dismisses it, and anything else fails `40001`.
+Responde a uma pergunta pendente. Ambos os endpoints de pergunta são despachados através de uma única rota, `POST /api/v1/sessions/{session_id}/questions/{tail}`: um id de pergunta simples (bare) responde à pergunta, uma cauda `{question_id}:dismiss` a descarta (dismiss), e qualquer outra coisa falha com `40001`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `question_id` | path | string | **Required.** Question id |
-| `answers` | body | object | **Required.** Map of question item id (`q_0`, …) to an answer object; variants below |
-| `method` | body | string | How the answer was produced: `enter` / `space` / `number_key` / `click` |
-| `note` | body | string | Free-form note attached to the response |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `question_id` | path | string | **Obrigatório.** Id da pergunta |
+| `answers` | body | object | **Obrigatório.** Mapa de id do item de pergunta (`q_0`, …) para um objeto de resposta; variantes abaixo |
+| `method` | body | string | Como a resposta foi produzida: `enter` / `space` / `number_key` / `click` |
+| `note` | body | string | Nota de formato livre anexada à resposta |
 
-Each answer is an object discriminated by `kind`:
+Cada resposta é um objeto discriminado por `kind`:
 
-| Kind | Fields | Description |
+| Tipo (Kind) | Campos | Descrição |
 | --- | --- | --- |
-| `single` | `option_id` | One chosen option |
-| `multi` | `option_ids` | Several chosen options (at least 1) |
-| `other` | `text` | A free-text answer |
-| `multi_with_other` | `option_ids`, `other_text` | Options plus free text |
-| `skipped` | — | The item was skipped |
+| `single` | `option_id` | Uma opção escolhida |
+| `multi` | `option_ids` | Várias opções escolhidas (pelo menos 1) |
+| `other` | `text` | Uma resposta em texto livre |
+| `multi_with_other` | `option_ids`, `other_text` | Opções mais texto livre |
+| `skipped` | — | O item foi pulado (skipped) |
 
-On success, `data` is `{ resolved: true, resolved_at }`.
+Em caso de sucesso, `data` é `{ resolved: true, resolved_at }`.
 
-- `40001`: validation failure (`details` lists each field)
-- `40401`: session not found
-- `40405`: no pending question with that id
-- `40902`: the question was already resolved; `data` carries `{ resolved: false }`
+- `40001`: falha de validação (`details` lista cada campo)
+- `40401`: sessão não encontrada
+- `40405`: nenhuma pergunta pendente com esse id
+- `40902`: a pergunta já foi resolvida; `data` carrega `{ resolved: false }`
 
 #### `POST /api/v1/sessions/{session_id}/questions/{question_id}:dismiss`
 
-Dismisses a pending question without answering it.
+Descarta (dismiss) uma pergunta pendente sem respondê-la.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `question_id` | path | string | **Required.** Question id |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `question_id` | path | string | **Obrigatório.** Id da pergunta |
 
-On success the envelope `code` is `40909` (`question dismissed`) rather than `0`, with `data` `{ dismissed: true, dismissed_at }` — clients must special-case this endpoint's success code.
+Em caso de sucesso, o `code` do envelope é `40909` (`question dismissed`) em vez de `0`, com `data` `{ dismissed: true, dismissed_at }` — clientes devem tratar o código de sucesso deste endpoint como um caso especial (special-case).
 
-- `40401`: session not found
-- `40405`: no pending question with that id
-- `40902`: the question was already resolved; `data` carries `{ resolved: false }`
+- `40401`: sessão não encontrada
+- `40405`: nenhuma pergunta pendente com esse id
+- `40902`: a pergunta já foi resolvida; `data` carrega `{ resolved: false }`
 
-### Background tasks
+### Tarefas em background
 
-Background tasks are the session's asynchronous units — background shells, subagents, and long-running tool tasks. The registry is live-only: a session not loaded in this server process reports an empty list.
+Tarefas em background são as unidades assíncronas da sessão — shells em background, subagentes e tarefas de ferramentas de longa duração (long-running). O registro é estritamente em tempo real (live-only): uma sessão não carregada neste processo do servidor relata uma lista vazia.
 
-| Method and path | Description |
+| Método e caminho | Descrição |
 | --- | --- |
-| `GET /api/v1/sessions/{session_id}/tasks` | List background tasks |
-| `GET /api/v1/sessions/{session_id}/tasks/{task_id}` | Read a task (optional output preview) |
-| `POST /api/v1/sessions/{session_id}/tasks/{task_id}:cancel` | Cancel a task |
-| `POST /api/v1/sessions/{session_id}/tasks/{task_id}:detach` | Move a foreground task to the background |
+| `GET /api/v1/sessions/{session_id}/tasks` | Listar tarefas em background |
+| `GET /api/v1/sessions/{session_id}/tasks/{task_id}` | Ler uma tarefa (visualização de saída opcional) |
+| `POST /api/v1/sessions/{session_id}/tasks/{task_id}:cancel` | Cancelar uma tarefa |
+| `POST /api/v1/sessions/{session_id}/tasks/{task_id}:detach` | Mover uma tarefa de primeiro plano (foreground) para o background |
 
 #### `GET /api/v1/sessions/{session_id}/tasks`
 
-Lists the session's background tasks.
+Lista as tarefas em background da sessão.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `status` | query | string | Keep only one status: `running` / `completed` / `failed` / `cancelled` |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `status` | query | string | Manter apenas um status: `running` / `completed` / `failed` / `cancelled` |
 
-On success, `data` is `{ items }` where each item is a task object `{ id, session_id, kind, description, status, created_at, started_at?, completed_at?, command?, model?, thinking_effort?, agent_id?, subagent_type?, parent_tool_call_id?, output_preview?, output_bytes? }`. `kind` is `bash` / `subagent` / `tool`; `command` is set for `bash` tasks, the model and agent fields for `subagent` tasks, and the output fields only when a task is read with `with_output`. Timed-out and lost tasks report `failed`; killed tasks report `cancelled`.
+Em caso de sucesso, `data` é `{ items }` onde cada item é um objeto de tarefa `{ id, session_id, kind, description, status, created_at, started_at?, completed_at?, command?, model?, thinking_effort?, agent_id?, subagent_type?, parent_tool_call_id?, output_preview?, output_bytes? }`. `kind` é `bash` / `subagent` / `tool`; `command` é definido para tarefas `bash`, os campos de modelo e agente para tarefas `subagent`, e os campos de saída apenas quando uma tarefa é lida com `with_output`. Tarefas que esgotaram o tempo limite (timed-out) e tarefas perdidas relatam `failed`; tarefas encerradas (killed) relatam `cancelled`.
 
-- `40001`: validation failure — an unknown `status`
-- `40401`: session not found
+- `40001`: falha de validação — um `status` desconhecido
+- `40401`: sessão não encontrada
 
 #### `GET /api/v1/sessions/{session_id}/tasks/{task_id}`
 
-Reads one background task, optionally with a tail of its output.
+Lê uma tarefa em background, opcionalmente com uma cauda (tail) de sua saída.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `task_id` | path | string | **Required.** Task id |
-| `with_output` | query | boolean | Include an output tail in the response. Default `false` |
-| `output_bytes` | query | integer | Size of the requested output tail in bytes, minimum `0`. Default `32768` |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `task_id` | path | string | **Obrigatório.** Id da tarefa |
+| `with_output` | query | boolean | Incluir uma cauda de saída na resposta. Padrão `false` |
+| `output_bytes` | query | integer | Tamanho da cauda de saída requisitada em bytes, mínimo `0`. Padrão `32768` |
 
-On success, `data` is the task object documented under `GET /api/v1/sessions/{session_id}/tasks` above; with `with_output=true` and non-empty output, `output_preview` carries the tail text and `output_bytes` its byte length.
+Em caso de sucesso, `data` é o objeto de tarefa documentado em `GET /api/v1/sessions/{session_id}/tasks` acima; com `with_output=true` e saída não vazia, `output_preview` carrega o texto da cauda e `output_bytes` seu comprimento em bytes.
 
-- `40001`: validation failure
-- `40401`: session not found
-- `40406`: no task with that id (a cold session has no live tasks at all)
+- `40001`: falha de validação
+- `40401`: sessão não encontrada
+- `40406`: não existe tarefa com esse id (uma sessão fria não possui nenhuma tarefa em tempo real)
 
 #### `POST /api/v1/sessions/{session_id}/tasks/{task_id}:cancel`
 
-Cancels a running task. It dispatches through `POST /api/v1/sessions/{session_id}/tasks/{tail}` with `cancel` / `detach` as the supported actions — a bare task id or an unknown action fails `40001`.
+Cancela uma tarefa em execução. É despachado através de `POST /api/v1/sessions/{session_id}/tasks/{tail}` com `cancel` / `detach` como as ações suportadas — um id de tarefa simples (bare) ou uma ação desconhecida falha com `40001`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `task_id` | path | string | **Required.** Task id |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `task_id` | path | string | **Obrigatório.** Id da tarefa |
 
-On success, `data` is `{ cancelled: true }`.
+Em caso de sucesso, `data` é `{ cancelled: true }`.
 
-- `40001`: missing or unknown action suffix
-- `40401`: session not found
-- `40406`: no task with that id
-- `40904`: the task already finished; `data` carries `{ cancelled: false }` and `details.current_status` the terminal status
+- `40001`: sufixo de ação ausente ou desconhecido
+- `40401`: sessão não encontrada
+- `40406`: não existe tarefa com esse id
+- `40904`: a tarefa já foi finalizada; `data` carrega `{ cancelled: false }` e `details.current_status` o status terminal
 
 #### `POST /api/v1/sessions/{session_id}/tasks/{task_id}:detach`
 
-Moves a running foreground task to the background without stopping it: the tool call waiting on the task returns immediately with a background-task result, the turn continues, and the task keeps running under the background task registry (its output is persisted, and its completion arrives as a task notification). Already-background or finished tasks are an idempotent no-op. It dispatches through `POST /api/v1/sessions/{session_id}/tasks/{tail}` with `cancel` / `detach` as the supported actions — a bare task id or an unknown action fails `40001`.
+Move uma tarefa em execução no primeiro plano (foreground) para o background sem pará-la: a chamada de ferramenta que aguarda a tarefa retorna imediatamente com um resultado de tarefa em background, o turno continua, e a tarefa continua rodando sob o registro de tarefas em background (sua saída é persistida, e sua conclusão chega como uma notificação de tarefa). Tarefas já em background ou concluídas são um no-op idempotente. É despachado através de `POST /api/v1/sessions/{session_id}/tasks/{tail}` com `cancel` / `detach` como as ações suportadas — um id de tarefa simples (bare) ou uma ação desconhecida falha com `40001`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `task_id` | path | string | **Required.** Task id |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `task_id` | path | string | **Obrigatório.** Id da tarefa |
 
-On success, `data` is `{ detached, status }`: `detached` is `true` when the call moved a running foreground task to the background and `false` for the idempotent no-op; `status` is the task's status after the call.
+Em caso de sucesso, `data` é `{ detached, status }`: `detached` é `true` quando a chamada moveu uma tarefa em primeiro plano em execução para o background e `false` para o no-op idempotente; `status` é o status da tarefa após a chamada.
 
-- `40001`: missing or unknown action suffix
-- `40401`: session not found
-- `40406`: no task with that id
+- `40001`: sufixo de ação ausente ou desconhecido
+- `40401`: sessão não encontrada
+- `40406`: não existe tarefa com esse id
 
-### Skills, tools, and MCP
+### Skills, ferramentas e MCP
 
-These endpoints expose the skill catalogs a session or workspace sees, the effective agent's tool list, and its MCP servers. Skill activation and MCP restart use the `:{action}` convention; activation is the REST analogue of the `/<skill>` slash command.
+Estes endpoints expõem os catálogos de skills que uma sessão ou workspace vê, a lista de ferramentas do agente efetivo, e seus servidores MCP. A ativação de skill e a reinicialização de MCP usam a convenção `:{action}`; a ativação é o análogo REST do comando slash `/<skill>`.
 
-| Method and path | Description |
+| Método e caminho | Descrição |
 | --- | --- |
-| `GET /api/v1/sessions/{session_id}/skills` | Per-session skill catalog |
-| `GET /api/v1/workspaces/{workspace_id}/skills` | Session-less skill catalog for a workspace |
-| `POST /api/v1/sessions/{session_id}/skills/{skill_name}:activate` | Activate a skill (starts a turn) |
-| `GET /api/v1/tools` | List tools of the effective agent |
-| `GET /api/v1/mcp/servers` | List MCP servers |
-| `POST /api/v1/mcp/servers/{mcp_server_id}:restart` | Restart an MCP server |
+| `GET /api/v1/sessions/{session_id}/skills` | Catálogo de skills por sessão |
+| `GET /api/v1/workspaces/{workspace_id}/skills` | Catálogo de skills sem sessão para um workspace |
+| `POST /api/v1/sessions/{session_id}/skills/{skill_name}:activate` | Ativar uma skill (inicia um turno) |
+| `GET /api/v1/tools` | Listar ferramentas do agente efetivo |
+| `GET /api/v1/mcp/servers` | Listar servidores MCP |
+| `POST /api/v1/mcp/servers/{mcp_server_id}:restart` | Reiniciar um servidor MCP |
 
 #### `GET /api/v1/sessions/{session_id}/skills`
 
-Lists the skills available to one session, merged from every source (built-in, plugin, extra, user, project) with the session's precedence applied. Reading the catalog resumes the session when it is cold.
+Lista as skills disponíveis para uma sessão, mescladas a partir de todas as fontes (embutida, plugin, extra, usuário, projeto) com a precedência da sessão aplicada. Ler o catálogo retoma a sessão quando ela está fria.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
 
-On success, `data` is `{ skills }` where each item is a skill descriptor `{ name, description, path, source, type?, disable_model_invocation? }`: `source` is `project` / `user` / `extra` / `builtin`, `type` classifies the skill (only user-activatable types can be activated), and `disable_model_invocation` hides the skill from the model.
+Em caso de sucesso, `data` é `{ skills }` onde cada item é um descritor de skill `{ name, description, path, source, type?, disable_model_invocation? }`: `source` é `project` / `user` / `extra` / `builtin`, `type` classifica a skill (apenas tipos ativáveis pelo usuário podem ser ativados), e `disable_model_invocation` oculta a skill do modelo.
 
-- `40401`: session not found (or not activated)
+- `40401`: sessão não encontrada (ou não ativada)
 
 #### `GET /api/v1/workspaces/{workspace_id}/skills`
 
-Lists the skill catalog a session in this workspace would see, without creating or resuming a session — the same merge of built-in, plugin, extra, user, and project sources computed for the workspace root.
+Lista o catálogo de skills que uma sessão neste workspace veria, sem criar ou retomar uma sessão — a mesma mescla de fontes embutida, plugin, extra, usuário e projeto computada para a raiz do workspace.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `workspace_id` | path | string | **Required.** Registered workspace id |
+| `workspace_id` | path | string | **Obrigatório.** Id do workspace registrado |
 
-On success, `data` is `{ skills }` with the skill descriptor documented under `GET /api/v1/sessions/{session_id}/skills` above.
+Em caso de sucesso, `data` é `{ skills }` com o descritor de skill documentado em `GET /api/v1/sessions/{session_id}/skills` acima.
 
-- `40410`: workspace not found
+- `40410`: workspace não encontrado
 
 #### `POST /api/v1/sessions/{session_id}/skills/{skill_name}:activate`
 
-Activates a skill in the session — the REST analogue of the `/<skill>` slash command — starting a turn on the main agent with the skill's content plus `args` and attachments. The endpoint dispatches through one route, `POST /api/v1/sessions/{session_id}/skills/{tail}`: the tail is parsed as `{skill_name}:{action}`, `activate` is the only action, and a bare name or an unknown action fails `40001` (`unsupported action: ...`).
+Ativa uma skill na sessão — o análogo REST do comando slash `/<skill>` — iniciando um turno no agente principal com o conteúdo da skill mais `args` e anexos. O endpoint é despachado através de uma única rota, `POST /api/v1/sessions/{session_id}/skills/{tail}`: a parte final (tail) é analisada como `{skill_name}:{action}`, `activate` é a única ação, e um nome simples (bare) ou uma ação desconhecida falha com `40001` (`unsupported action: ...`).
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `skill_name` | path | string | **Required.** Name of the skill to activate |
-| `args` | body | string | Free-form arguments handed to the skill, like the text after a slash command |
-| `attachments` | body | array | Media parts attached to the activation. Image and video parts carry a `source` object whose `kind` is `url` / `base64` / `file` / `session_media` (same shapes as the prompt content parts); file parts carry the top-level `file_id`, `name`, `media_type`, and `size` |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `skill_name` | path | string | **Obrigatório.** Nome da skill a ser ativada |
+| `args` | body | string | Argumentos em formato livre (free-form) passados para a skill, como o texto após um comando slash |
+| `attachments` | body | array | Partes de mídia anexadas à ativação. Partes de imagem e vídeo carregam um objeto `source` cujo `kind` é `url` / `base64` / `file` / `session_media` (mesmos formatos das partes de conteúdo de prompt); partes de arquivo carregam `file_id` no nível superior, `name`, `media_type` e `size` |
 
-On success, `data` is `{ activated: true, skill_name }`.
+Em caso de sucesso, `data` é `{ activated: true, skill_name }`.
 
-- `40001`: validation failure or unsupported action suffix
-- `40401`: session not found (or not activated)
-- `40407`: a referenced attachment file does not exist
-- `40415`: no skill with that name
-- `40912`: the skill exists but its type cannot be activated by the user
+- `40001`: falha de validação ou sufixo de ação não suportado
+- `40401`: sessão não encontrada (ou não ativada)
+- `40407`: um arquivo de anexo referenciado não existe
+- `40415`: nenhuma skill com esse nome
+- `40912`: a skill existe mas seu tipo não pode ser ativado pelo usuário
 
 #### `GET /api/v1/tools`
 
-Lists the tools of the effective agent — the main agent of the session given by `session_id`, or of the most recently created session when the parameter is omitted. When no such session is live in this server process, the list is empty.
+Lista as ferramentas do agente efetivo — o agente principal da sessão fornecida por `session_id`, ou da sessão criada mais recentemente quando o parâmetro é omitido. Quando nenhuma sessão desse tipo está em tempo real neste processo do servidor, a lista é vazia.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | query | string | Session whose main agent to inspect. Default the most recently created session |
+| `session_id` | query | string | Sessão cujo agente principal deve ser inspecionado. O padrão é a sessão criada mais recentemente |
 
-On success, `data` is `{ tools }` where each item is `{ name, description, input_schema, source, mcp_server_id?, active? }`: `source` is `builtin` / `skill` / `mcp`, `mcp_server_id` is set on MCP tools (parsed from the `mcp__<server>__<tool>` name), and `active` reports the tool policy's verdict. `input_schema` is currently always `null`.
+Em caso de sucesso, `data` é `{ tools }` onde cada item é `{ name, description, input_schema, source, mcp_server_id?, active? }`: `source` é `builtin` / `skill` / `mcp`, `mcp_server_id` é definido em ferramentas MCP (analisado (parsed) a partir do nome `mcp__<server>__<tool>`), e `active` relata o veredito da política de ferramentas. `input_schema` é atualmente sempre `null`.
 
 #### `GET /api/v1/mcp/servers`
 
-Lists the MCP servers configured for the effective agent (the most recently created live session's main agent, as in `GET /api/v1/tools`). With no live session, the list is empty.
+Lista os servidores MCP configurados para o agente efetivo (o agente principal da sessão em tempo real criada mais recentemente, como em `GET /api/v1/tools`). Sem nenhuma sessão em tempo real, a lista é vazia.
 
-On success, `data` is `{ servers }` where each item is `{ id, name, transport, status, last_error?, tool_count }`: `transport` is `stdio` / `http` / `sse`, `status` is `connected` / `connecting` / `disconnected` / `error`, and `last_error` carries the failure text when the server is in `error`.
+Em caso de sucesso, `data` é `{ servers }` onde cada item é `{ id, name, transport, status, last_error?, tool_count }`: `transport` é `stdio` / `http` / `sse`, `status` é `connected` / `connecting` / `disconnected` / `error`, e `last_error` carrega o texto de falha quando o servidor está em `error`.
 
 #### `POST /api/v1/mcp/servers/{mcp_server_id}:restart`
 
-Reconnects one MCP server of the effective agent. The endpoint dispatches through `POST /api/v1/mcp/servers/{tail}` with `restart` as the only action — a bare server id or an unknown action fails `40001`.
+Reconecta um servidor MCP do agente efetivo. O endpoint é despachado através de `POST /api/v1/mcp/servers/{tail}` com `restart` como a única ação — um id de servidor simples (bare) ou uma ação desconhecida falha com `40001`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `mcp_server_id` | path | string | **Required.** MCP server id (its configured name) |
+| `mcp_server_id` | path | string | **Obrigatório.** Id do servidor MCP (seu nome configurado) |
 
-On success, `data` is `{ restarting: true }`.
+Em caso de sucesso, `data` é `{ restarting: true }`.
 
-- `40001`: missing or unknown action suffix
-- `40408`: no MCP server with that id (also reported when no session is live)
+- `40001`: sufixo de ação ausente ou desconhecido
+- `40408`: nenhum servidor MCP com esse id (também relatado quando não há sessão em tempo real)
 
-### Capabilities and plugins
+### Capacidades e plugins
 
-Capabilities are built-in features with layered readiness — detection steps plus a background install; the current build registers `kimi-cu` (Kimi Computer Use) and `kimi-webbridge` (Kimi WebBridge). Plugins are installed packages of skills, MCP servers, hooks, and commands. These endpoints report capability status and drive capability installs, and manage the plugin lifecycle from marketplace listing to removal.
+Capacidades (capabilities) são recursos embutidos com prontidão (readiness) em camadas — passos de detecção mais uma instalação em background; a build atual registra `kimi-cu` (Kimi Computer Use) e `kimi-webbridge` (Kimi WebBridge). Plugins são pacotes instalados de skills, servidores MCP, hooks e comandos. Estes endpoints relatam o status de capacidade e conduzem instalações de capacidade, e gerenciam o ciclo de vida dos plugins, desde a listagem no marketplace até a remoção.
 
-| Method and path | Description |
+| Método e caminho | Descrição |
 | --- | --- |
-| `GET /api/v1/capabilities` | List built-in capabilities with readiness status |
-| `GET /api/v1/capabilities/{capability_id}` | Read one capability's status |
-| `POST /api/v1/capabilities/{capability_id}:install` | Start a capability install (background; poll GET for progress) |
-| `GET /api/v1/plugins` | List installed plugins |
-| `POST /api/v1/plugins` | Install a plugin from a local path, zip URL, or GitHub repo |
-| `GET /api/v1/plugins/marketplace` | Marketplace catalog merged with live install state |
-| `POST /api/v1/plugins/{plugin_id}:{action}` | Plugin actions: `enable` / `disable` / `remove` |
+| `GET /api/v1/capabilities` | Listar capacidades embutidas com status de prontidão |
+| `GET /api/v1/capabilities/{capability_id}` | Ler o status de uma capacidade |
+| `POST /api/v1/capabilities/{capability_id}:install` | Iniciar a instalação de uma capacidade (em background; faça polling de GET para progresso) |
+| `GET /api/v1/plugins` | Listar plugins instalados |
+| `POST /api/v1/plugins` | Instalar um plugin de um caminho local, URL zip ou repositório GitHub |
+| `GET /api/v1/plugins/marketplace` | Catálogo do marketplace mesclado com estado de instalação em tempo real |
+| `POST /api/v1/plugins/{plugin_id}:{action}` | Ações de plugin: `enable` / `disable` / `remove` |
 
 #### `GET /api/v1/capabilities`
 
-Lists every registered capability with its readiness status.
+Lista todas as capacidades registradas com seu status de prontidão.
 
-On success, `data` is `{ capabilities }` where each item is a capability status object `{ id, pluginId?, displayName, description, supported, state, version?, steps, install }`. `state` is `ready` (every required detection step `ok`) / `partial` (some step `ok`) / `not_installed` / `unsupported` (not available on this platform/architecture); `steps` lists the detection steps as `{ id, state, detail?, optional? }` with `state` one of `ok` / `missing` / `failed`; `install` is the install progress `{ running, step?, percent?, error?, note? }` with `percent` between 0 and 100.
+Em caso de sucesso, `data` é `{ capabilities }` onde cada item é um objeto de status de capacidade `{ id, pluginId?, displayName, description, supported, state, version?, steps, install }`. `state` é `ready` (todo passo de detecção exigido está `ok`) / `partial` (algum passo está `ok`) / `not_installed` / `unsupported` (não disponível nesta plataforma/arquitetura); `steps` lista os passos de detecção como `{ id, state, detail?, optional? }` com `state` sendo um de `ok` / `missing` / `failed`; `install` é o progresso de instalação `{ running, step?, percent?, error?, note? }` com `percent` entre 0 e 100.
 
 #### `GET /api/v1/capabilities/{capability_id}`
 
-Reads one capability's readiness status — the polling counterpart of the `:install` action.
+Lê o status de prontidão de uma capacidade — o equivalente em polling da ação `:install`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `capability_id` | path | string | **Required.** Capability id |
+| `capability_id` | path | string | **Obrigatório.** Id da capacidade |
 
-On success, `data` is the capability status object documented under `GET /api/v1/capabilities` above.
+Em caso de sucesso, `data` é o objeto de status de capacidade documentado em `GET /api/v1/capabilities` acima.
 
-- `40418`: no capability with that id
+- `40418`: nenhuma capacidade com esse id
 
 #### `POST /api/v1/capabilities/{capability_id}:install`
 
-Starts installing a capability in the background and returns immediately with the current status (`install.running` is `true`); poll `GET /api/v1/capabilities/{capability_id}` for progress. The endpoint dispatches through `POST /api/v1/capabilities/{tail}` with `install` as the only action — a bare id or an unknown action fails `40001`.
+Inicia a instalação de uma capacidade em background e retorna imediatamente com o status atual (`install.running` é `true`); faça polling em `GET /api/v1/capabilities/{capability_id}` para obter o progresso. O endpoint é despachado através de `POST /api/v1/capabilities/{tail}` com `install` como a única ação — um id simples (bare) ou uma ação desconhecida falha com `40001`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `capability_id` | path | string | **Required.** Capability id |
+| `capability_id` | path | string | **Obrigatório.** Id da capacidade |
 
-On success, `data` is the capability status object documented under `GET /api/v1/capabilities` above.
+Em caso de sucesso, `data` é o objeto de status de capacidade documentado em `GET /api/v1/capabilities` acima.
 
-- `40001`: missing or unknown action suffix
-- `40418`: no capability with that id
-- `40924`: an install of this capability is already running
-- `40925`: the capability is not supported on this platform/architecture
+- `40001`: sufixo de ação ausente ou desconhecido
+- `40418`: nenhuma capacidade com esse id
+- `40924`: uma instalação desta capacidade já está em execução
+- `40925`: a capacidade não é suportada nesta plataforma/arquitetura
 
 #### `GET /api/v1/plugins`
 
-Lists installed plugins.
+Lista os plugins instalados.
 
-On success, `data` is `{ plugins }` where each item is `{ id, displayName, version?, enabled, state, skillCount, mcpServerCount, enabledMcpServerCount, hookCount, commandCount, hasErrors, source, originalSource?, github? }`: `state` is `ok` / `error` (load failures also set `hasErrors`), `source` is `local-path` / `zip-url` / `github`, and `github` carries the provenance `{ owner, repo, ref, installedSha? }` with `ref` `{ kind: branch|tag|sha, value }` for GitHub-sourced plugins.
+Em caso de sucesso, `data` é `{ plugins }` onde cada item é `{ id, displayName, version?, enabled, state, skillCount, mcpServerCount, enabledMcpServerCount, hookCount, commandCount, hasErrors, source, originalSource?, github? }`: `state` é `ok` / `error` (falhas de carregamento também definem `hasErrors`), `source` é `local-path` / `zip-url` / `github`, e `github` carrega a proveniência `{ owner, repo, ref, installedSha? }` com `ref` sendo `{ kind: branch|tag|sha, value }` para plugins obtidos (sourced) do GitHub.
 
 #### `POST /api/v1/plugins`
 
-Installs a plugin and returns its summary.
+Instala um plugin e retorna seu resumo.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `source` | body | string | **Required.** Where to install from: an absolute local path, an `http(s)` URL to a zip archive, or a GitHub URL — `https://github.com/<owner>/<repo>`, optionally pinned with `/tree/<branch-or-sha>`, `/releases/tag/<tag>`, or `/commit/<sha>` |
+| `source` | body | string | **Obrigatório.** De onde instalar: um caminho local absoluto, uma URL `http(s)` para um arquivo zip, ou uma URL do GitHub — `https://github.com/<owner>/<repo>`, opcionalmente fixada (pinned) com `/tree/<branch-or-sha>`, `/releases/tag/<tag>`, ou `/commit/<sha>` |
 
-On success, `data` is the plugin summary documented under `GET /api/v1/plugins` above.
+Em caso de sucesso, `data` é o resumo do plugin documentado em `GET /api/v1/plugins` acima.
 
-- `40001`: validation failure — for example `source` is neither a URL nor an absolute path, or the plugin failed to load
-- `40409`: the local path does not exist
+- `40001`: falha de validação — por exemplo, `source` não é uma URL nem um caminho absoluto, ou o plugin falhou ao carregar
+- `40409`: o caminho local não existe
 
 #### `GET /api/v1/plugins/marketplace`
 
-Lists the plugin marketplace catalog merged with live install state. The catalog is fetched per request (10-second timeout) from the configured marketplace URL; with the default catalog, built-in capabilities missing from the catalog are merged in as rows (with `capabilityId` set) and rows whose capability is unsupported on this platform are dropped.
+Lista o catálogo do marketplace de plugins mesclado com o estado de instalação em tempo real. O catálogo é buscado por requisição (timeout de 10 segundos) a partir da URL do marketplace configurada; com o catálogo padrão, as capacidades embutidas ausentes no catálogo são mescladas como linhas (com `capabilityId` definido) e as linhas cuja capacidade não é suportada nesta plataforma são descartadas.
 
-On success, `data` is `{ entries }` where each item is `{ id, tier, displayName, description?, homepage?, keywords?, version?, source, installed?, updateAvailable?, capabilityId? }`: `tier` is `official` / `curated` / `third-party`, `installed` is `{ version?, enabled }` when the plugin is installed, and `updateAvailable` marks rows whose catalog version is newer than the installed one. An entry's `source` feeds the `source` field of `POST /api/v1/plugins`.
+Em caso de sucesso, `data` é `{ entries }` onde cada item é `{ id, tier, displayName, description?, homepage?, keywords?, version?, source, installed?, updateAvailable?, capabilityId? }`: `tier` é `official` / `curated` / `third-party`, `installed` é `{ version?, enabled }` quando o plugin está instalado, e `updateAvailable` marca linhas cuja versão do catálogo é mais nova que a versão instalada. O `source` de uma entrada alimenta o campo `source` de `POST /api/v1/plugins`.
 
-- `50001`: the marketplace is unreachable or returned an invalid catalog
+- `50001`: o marketplace está inacessível ou retornou um catálogo inválido
 
 #### `POST /api/v1/plugins/{plugin_id}:enable`
 
-Enables an installed plugin. Plugin actions dispatch through one route, `POST /api/v1/plugins/{tail}`: the tail is parsed as `{plugin_id}:{action}` with `enable` / `disable` / `remove` as the actions, and a bare id or an unknown action fails `40001` (`unsupported action: ...`).
+Habilita um plugin instalado. Ações de plugin são despachadas através de uma única rota, `POST /api/v1/plugins/{tail}`: a parte final (tail) é analisada como `{plugin_id}:{action}` com `enable` / `disable` / `remove` como as ações, e um id simples (bare) ou uma ação desconhecida falha com `40001` (`unsupported action: ...`).
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `plugin_id` | path | string | **Required.** Installed plugin id |
+| `plugin_id` | path | string | **Obrigatório.** Id do plugin instalado |
 
-On success, `data` is `{ ok: true }`.
+Em caso de sucesso, `data` é `{ ok: true }`.
 
-- `40001`: missing or unknown action suffix
-- `40419`: no installed plugin with that id
+- `40001`: sufixo de ação ausente ou desconhecido
+- `40419`: nenhum plugin instalado com esse id
 
 #### `POST /api/v1/plugins/{plugin_id}:disable`
 
-Disables an installed plugin without removing it; the dispatch contract matches `:enable` above.
+Desabilita um plugin instalado sem removê-lo; o contrato de despacho (dispatch) corresponde ao `:enable` acima.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `plugin_id` | path | string | **Required.** Installed plugin id |
+| `plugin_id` | path | string | **Obrigatório.** Id do plugin instalado |
 
-On success, `data` is `{ ok: true }`.
+Em caso de sucesso, `data` é `{ ok: true }`.
 
-- `40001`: missing or unknown action suffix
-- `40419`: no installed plugin with that id
+- `40001`: sufixo de ação ausente ou desconhecido
+- `40419`: nenhum plugin instalado com esse id
 
 #### `POST /api/v1/plugins/{plugin_id}:remove`
 
-Removes an installed plugin; the dispatch contract matches `:enable` above.
+Remove um plugin instalado; o contrato de despacho corresponde ao `:enable` acima.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `plugin_id` | path | string | **Required.** Installed plugin id |
+| `plugin_id` | path | string | **Obrigatório.** Id do plugin instalado |
 
-On success, `data` is `{ ok: true }`.
+Em caso de sucesso, `data` é `{ ok: true }`.
 
-- `40001`: missing or unknown action suffix
-- `40419`: no installed plugin with that id
+- `40001`: sufixo de ação ausente ou desconhecido
+- `40419`: nenhum plugin instalado com esse id
 
-### Terminals
+### Terminais
 
-PTY terminal endpoints; mounted only on loopback binds (a non-loopback bind skips them unless `--allow-remote-terminals` is passed). Terminal input, output, and resize flow over WebSocket `terminal_*` frames — the REST surface manages the terminal lifecycle only.
+Endpoints de terminal PTY; montados apenas em binds de loopback (um bind não-loopback os ignora a menos que `--allow-remote-terminals` seja passado). A entrada, saída e redimensionamento do terminal fluem através de quadros (frames) WebSocket `terminal_*` — a superfície REST gerencia apenas o ciclo de vida do terminal.
 
-| Method and path | Description |
+| Método e caminho | Descrição |
 | --- | --- |
-| `GET /api/v1/sessions/{session_id}/terminals` | List terminals |
-| `POST /api/v1/sessions/{session_id}/terminals` | Create a terminal |
-| `GET /api/v1/sessions/{session_id}/terminals/{terminal_id}` | Read a terminal |
-| `POST /api/v1/sessions/{session_id}/terminals/{terminal_id}:close` | Close a terminal |
+| `GET /api/v1/sessions/{session_id}/terminals` | Listar terminais |
+| `POST /api/v1/sessions/{session_id}/terminals` | Criar um terminal |
+| `GET /api/v1/sessions/{session_id}/terminals/{terminal_id}` | Ler um terminal |
+| `POST /api/v1/sessions/{session_id}/terminals/{terminal_id}:close` | Fechar um terminal |
 
 #### `GET /api/v1/sessions/{session_id}/terminals`
 
-Lists the session's terminals. Reading the list resumes the session when it is cold.
+Lista os terminais da sessão. Ler a lista retoma a sessão quando ela está fria.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
 
-On success, `data` is `{ items }` where each item is a terminal object `{ id, session_id, cwd, shell, cols, rows, status, created_at, exited_at?, exit_code? }`: `status` is `running` / `exited`, and an exited terminal carries `exited_at` plus `exit_code` (`null` when the process reported none, for example after a signal). Scrollback is not part of the object — output replays and streams over the WebSocket.
+Em caso de sucesso, `data` é `{ items }` onde cada item é um objeto de terminal `{ id, session_id, cwd, shell, cols, rows, status, created_at, exited_at?, exit_code? }`: `status` é `running` / `exited`, e um terminal encerrado carrega `exited_at` mais `exit_code` (`null` quando o processo não relatou nenhum, por exemplo, após um sinal). O scrollback não faz parte do objeto — a saída é reproduzida (replayed) e transmitida (streamed) via WebSocket.
 
-- `40401`: session not found
+- `40401`: sessão não encontrada
 
 #### `POST /api/v1/sessions/{session_id}/terminals`
 
