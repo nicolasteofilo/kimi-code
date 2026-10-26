@@ -1503,177 +1503,179 @@ Em caso de sucesso, `data` é `{ items }` onde cada item é um objeto de termina
 
 #### `POST /api/v1/sessions/{session_id}/terminals`
 
-Creates a PTY terminal for the session.
+Cria um terminal PTY para a sessão.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `runtime_id` | body | string | Runtime to spawn in. Default `local` |
-| `cwd` | body | string | Working directory, relative to the session workspace (an absolute path fails validation). Default the workspace root |
-| `shell` | body | string | Shell executable. Default the runtime's shell |
-| `cols` | body | integer | Terminal width, positive. Default `80` |
-| `rows` | body | integer | Terminal height, positive. Default `24` |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `runtime_id` | body | string | Runtime no qual instanciar (spawn). Padrão `local` |
+| `cwd` | body | string | Diretório de trabalho, relativo ao workspace da sessão (um caminho absoluto falha na validação). O padrão é a raiz do workspace |
+| `shell` | body | string | Executável do shell. O padrão é o shell do runtime |
+| `cols` | body | integer | Largura do terminal, positiva. Padrão `80` |
+| `rows` | body | integer | Altura do terminal, positiva. Padrão `24` |
 
-On success, `data` is the terminal object documented under `GET /api/v1/sessions/{session_id}/terminals` above.
+Em caso de sucesso, `data` é o objeto de terminal documentado em `GET /api/v1/sessions/{session_id}/terminals` acima.
 
-- `40001`: validation failure (`details` lists each field)
-- `40401`: session not found
-- `41304`: `cwd` resolves outside the session workspace
+- `40001`: falha de validação (`details` lista cada campo)
+- `40401`: sessão não encontrada
+- `41304`: `cwd` resolve para fora do workspace da sessão
 
 #### `GET /api/v1/sessions/{session_id}/terminals/{terminal_id}`
 
-Reads one terminal.
+Lê um terminal.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `terminal_id` | path | string | **Required.** Terminal id |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `terminal_id` | path | string | **Obrigatório.** Id do terminal |
 
-On success, `data` is the terminal object documented under `GET /api/v1/sessions/{session_id}/terminals` above.
+Em caso de sucesso, `data` é o objeto de terminal documentado em `GET /api/v1/sessions/{session_id}/terminals` acima.
 
-- `40401`: session not found
-- `40414`: no terminal with that id
+- `40401`: sessão não encontrada
+- `40414`: nenhum terminal com esse id
 
 #### `POST /api/v1/sessions/{session_id}/terminals/{terminal_id}:close`
 
-Closes a terminal, killing its process. The endpoint dispatches through `POST /api/v1/sessions/{session_id}/terminals/{tail}` with `close` as the only action — a bare id or an unknown action fails `40001`.
+Fecha um terminal, encerrando (killing) seu processo. O endpoint é despachado através de `POST /api/v1/sessions/{session_id}/terminals/{tail}` com `close` como a única ação — um id simples (bare) ou uma ação desconhecida falha com `40001`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `terminal_id` | path | string | **Required.** Terminal id |
+| `session_id` | path | string | **Obrigatório.** Id da sessão |
+| `terminal_id` | path | string | **Obrigatório.** Id do terminal |
 
-On success, `data` is `{ closed: true }`.
+Em caso de sucesso, `data` é `{ closed: true }`.
 
-- `40001`: missing or unknown action suffix
-- `40401`: session not found
-- `40414`: no terminal with that id
+- `40001`: sufixo de ação ausente ou desconhecido
+- `40401`: sessão não encontrada
+- `40414`: nenhum terminal com esse id
 
 ### Workspaces
 
-Workspaces are the registered project directories sessions live in. These endpoints manage the registry — list, register, rename, unregister — plus the per-workspace trust state that gates project-level MCP config. Every endpoint that returns a workspace uses the wire shape documented once under [The workspace object](#the-workspace-object).
+Workspaces são os diretórios de projeto registrados onde as sessões residem. Estes endpoints gerenciam o registro — listar, registrar, renomear, cancelar o registro — além do estado de confiança (trust state) por workspace, que controla (gates) a configuração MCP no nível do projeto. Todo endpoint que retorna um workspace usa o formato de transporte (wire shape) documentado uma vez em [O objeto de workspace](#o-objeto-de-workspace).
 
-| Method and path | Description |
+| Método e caminho | Descrição |
 | --- | --- |
-| `GET /api/v1/workspaces` | List registered workspaces |
-| `POST /api/v1/workspaces` | Register a workspace (idempotent on the root path) |
-| `PATCH /api/v1/workspaces/{workspace_id}` | Rename |
-| `DELETE /api/v1/workspaces/{workspace_id}` | Unregister (keeps on-disk content) |
-| `GET /api/v1/workspaces/{workspace_id}/trust` | Read the trust state |
-| `POST /api/v1/workspaces/{workspace_id}/trust` | Grant trust |
-| `POST /api/v1/workspaces/{workspace_id}/untrust` | Revoke trust |
-| `POST /api/v1/workspaces/{workspace_id}/add-dir` | Add an additional directory |
+| `GET /api/v1/workspaces` | Listar workspaces registrados |
+| `POST /api/v1/workspaces` | Registrar um workspace (idempotente no caminho raiz) |
+| `PATCH /api/v1/workspaces/{workspace_id}` | Renomear |
+| `DELETE /api/v1/workspaces/{workspace_id}` | Cancelar registro (mantém o conteúdo no disco) |
+| `GET /api/v1/workspaces/{workspace_id}/trust` | Ler o estado de confiança |
+| `POST /api/v1/workspaces/{workspace_id}/trust` | Conceder confiança |
+| `POST /api/v1/workspaces/{workspace_id}/untrust` | Revogar confiança |
+| `POST /api/v1/workspaces/{workspace_id}/add-dir` | Adicionar um diretório adicional |
 
-#### The workspace object
+#### O objeto de workspace
 
-Every endpoint that returns a workspace uses this wire shape. Registration and rename broadcast the global `event.workspace.created` / `event.workspace.updated` events.
+Todo endpoint que retorna um workspace usa este formato de transporte (wire shape). O registro e a renomeação transmitem os eventos globais `event.workspace.created` / `event.workspace.updated`.
 
-| Field | Type | Description |
+| Campo | Tipo | Descrição |
 | --- | --- | --- |
-| `id` | string | Workspace id, a `wd_<slug>_<hash12>` string derived from the root path |
-| `root` | string | Absolute path of the project directory |
-| `name` | string | Display name, 1–100 characters; defaults to the root's base name |
-| `created_at` | string | Registration time, ISO 8601 |
-| `last_opened_at` | string | Last time the workspace was opened or re-registered, ISO 8601 |
-| `session_count` | integer | Number of sessions in the workspace |
+| `id` | string | Id do workspace, uma string `wd_<slug>_<hash12>` derivada do caminho raiz |
+| `root` | string | Caminho absoluto do diretório do projeto |
+| `name` | string | Nome de exibição, 1–100 caracteres; o padrão é o nome base do diretório raiz |
+| `created_at` | string | Tempo de registro, ISO 8601 |
+| `last_opened_at` | string | Última vez que o workspace foi aberto ou re-registrado, ISO 8601 |
+| `session_count` | integer | Número de sessões no workspace |
 
 #### `GET /api/v1/workspaces`
 
-Lists every registered workspace.
+Lista todos os workspaces registrados.
 
-On success, `data` is `{ items }` where each item is [the workspace object](#the-workspace-object).
+Em caso de sucesso, `data` é `{ items }` onde cada item é [o objeto de workspace](#o-objeto-de-workspace).
 
 #### `POST /api/v1/workspaces`
 
-Registers a workspace and returns it. Registration is idempotent on the root path: registering an already-registered root returns the existing workspace with only `last_opened_at` refreshed (the stored name is kept), broadcasting `event.workspace.updated` instead of `event.workspace.created`.
+Registra um workspace e o retorna. O registro é idempotente no caminho raiz: registrar uma raiz já registrada retorna o workspace existente com apenas `last_opened_at` atualizado (o nome armazenado é mantido), transmitindo `event.workspace.updated` em vez de `event.workspace.created`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `root` | body | string | **Required.** Absolute path of an existing directory |
-| `name` | body | string | Display name, 1–100 characters. Default the root's base name |
+| `root` | body | string | **Obrigatório.** Caminho absoluto de um diretório existente |
+| `name` | body | string | Nome de exibição, 1–100 caracteres. O padrão é o nome base do diretório raiz |
 
-On success, `data` is [the workspace object](#the-workspace-object).
+Em caso de sucesso, `data` é [o objeto de workspace](#o-objeto-de-workspace).
 
-- `40001`: `root` is missing or not an absolute path (`details` lists the field)
-- `40409`: `root` does not exist or is not a directory
+- `40001`: `root` está ausente ou não é um caminho absoluto (`details` lista o campo)
+- `40409`: `root` não existe ou não é um diretório
 
 #### `PATCH /api/v1/workspaces/{workspace_id}`
 
-Renames a workspace — the display name only; the root path never changes.
+Renomeia um workspace — apenas o nome de exibição; o caminho raiz nunca muda.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `workspace_id` | path | string | **Required.** Workspace id |
-| `name` | body | string | **Required.** New display name, 1–100 characters |
+| `workspace_id` | path | string | **Obrigatório.** Id do workspace |
+| `name` | body | string | **Obrigatório.** Novo nome de exibição, 1–100 caracteres |
 
-On success, `data` is [the workspace object](#the-workspace-object).
+Em caso de sucesso, `data` é [o objeto de workspace](#o-objeto-de-workspace).
 
-- `40001`: validation failure (`details` lists each field)
-- `40410`: workspace not found
+- `40001`: falha de validação (`details` lista cada campo)
+- `40410`: workspace não encontrado
 
 #### `DELETE /api/v1/workspaces/{workspace_id}`
 
-Unregisters a workspace. Only the registry entry is removed — the on-disk directory is untouched.
+Cancela o registro de um workspace. Apenas a entrada no registro é removida — o diretório no disco permanece intacto.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `workspace_id` | path | string | **Required.** Workspace id |
+| `workspace_id` | path | string | **Obrigatório.** Id do workspace |
 
-On success, `data` is `{ deleted: true }`.
+Em caso de sucesso, `data` é `{ deleted: true }`.
 
-- `40410`: workspace not found
+- `40410`: workspace não encontrado
 
 #### `GET /api/v1/workspaces/{workspace_id}/trust`
 
-Reads the workspace trust state. Trust gates whether project-level MCP config loads for the workspace.
+Lê o estado de confiança (trust state) do workspace. A confiança controla (gates) se a configuração MCP no nível do projeto será carregada para o workspace.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `workspace_id` | path | string | **Required.** Workspace id |
+| `workspace_id` | path | string | **Obrigatório.** Id do workspace |
 
-On success, `data` is `{ trusted }`.
+Em caso de sucesso, `data` é `{ trusted }`.
 
-- `40410`: workspace not found
+- `40410`: workspace não encontrado
 
 #### `POST /api/v1/workspaces/{workspace_id}/trust`
 
-Marks the workspace trusted, loading its project-level MCP config.
+Marca o workspace como confiável, carregando sua configuração MCP no nível do projeto.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `workspace_id` | path | string | **Required.** Workspace id |
+| `workspace_id` | path | string | **Obrigatório.** Id do workspace |
 
-On success, `data` is `{ trusted: true }`.
+Em caso de sucesso, `data` é `{ trusted: true }`.
 
-- `40410`: workspace not found
+- `40410`: workspace não encontrado
 
 #### `POST /api/v1/workspaces/{workspace_id}/untrust`
 
-Revokes workspace trust, unloading its project-level MCP config.
+#### `POST /api/v1/workspaces/{workspace_id}/untrust`
 
-| Parameter | In | Type | Description |
+Revoga a confiança do workspace, descarregando sua configuração MCP no nível do projeto.
+
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `workspace_id` | path | string | **Required.** Workspace id |
+| `workspace_id` | path | string | **Obrigatório.** Id do workspace |
 
-On success, `data` is `{ trusted: false }`.
+Em caso de sucesso, `data` é `{ trusted: false }`.
 
-- `40410`: workspace not found
+- `40410`: workspace não encontrado
 
 #### `POST /api/v1/workspaces/{workspace_id}/add-dir`
 
-Adds an additional directory to the workspace, with the same semantics as the CLI `--add-dir` flag and the TUI `/add-dir` command. The path accepts absolute paths, relative paths (resolved against the workspace root), and `~` expansion.
+Adiciona um diretório adicional ao workspace, com a mesma semântica que a flag `--add-dir` da CLI e o comando `/add-dir` da TUI. O caminho aceita caminhos absolutos, caminhos relativos (resolvidos contra a raiz do workspace) e expansão de `~`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `workspace_id` | path | string | **Required.** Workspace id |
-| `path` | body | string | **Required.** Directory to add |
-| `persist` | body | boolean | Defaults to `true`: appends to `workspace.additional_dir` in `<project root>/.kimi-code/local.toml`. With `false`, the directory only joins the in-memory ephemeral set shared by all sessions of the workspace |
+| `workspace_id` | path | string | **Obrigatório.** Id do workspace |
+| `path` | body | string | **Obrigatório.** Diretório a ser adicionado |
+| `persist` | body | boolean | O padrão é `true`: anexa a `workspace.additional_dir` em `<project root>/.kimi-code/local.toml`. Com `false`, o diretório apenas se junta ao conjunto efêmero em memória compartilhado por todas as sessões do workspace |
 
-On success, `data` is `{ project_root, config_path, additional_dirs, persisted }`, where `additional_dirs` lists every additional directory (existing ones included) and `persisted` reports whether this call wrote to disk.
+Em caso de sucesso, `data` é `{ project_root, config_path, additional_dirs, persisted }`, onde `additional_dirs` lista todos os diretórios adicionais (incluindo os já existentes) e `persisted` relata se esta chamada gravou no disco.
 
-- `40001`: validation failure (`details` lists each field), or an engine-side config validation error such as a corrupted project local config
-- `40409`: `path` does not exist or is not a directory
-- `40410`: workspace not found
+- `40001`: falha de validação (`details` lista cada campo), ou um erro de validação de configuração no lado da engine (engine-side), como uma configuração local de projeto corrompida
+- `40409`: `path` não existe ou não é um diretório
+- `40410`: workspace não encontrado
 
 ### File system
 
