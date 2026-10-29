@@ -1677,516 +1677,516 @@ Em caso de sucesso, `data` é `{ project_root, config_path, additional_dirs, per
 - `40409`: `path` não existe ou não é um diretório
 - `40410`: workspace não encontrado
 
-### File system
+### Sistema de arquivos (`File system`)
 
-In-session file operations go through `POST /api/v1/sessions/{session_id}/fs:{action}` with JSON bodies; actions are `list` / `read` / `list_many` / `stat` / `stat_many` / `mkdir` / `search` / `grep` / `git_status` / `diff` / `open` / `open-in` / `reveal`. Every action body also accepts an optional `runtime_id` (string, default `local`) selecting the runtime that executes the operation; `open`, `open-in`, and `reveal` only work on the `local` runtime. In addition:
+As operações de arquivos em sessão são realizadas através de `POST /api/v1/sessions/{session_id}/fs:{action}` com corpos em JSON; as ações disponíveis são `list` / `read` / `list_many` / `stat` / `stat_many` / `mkdir` / `search` / `grep` / `git_status` / `diff` / `open` / `open-in` / `reveal`. O corpo de cada ação também aceita um `runtime_id` opcional (string, padrão `local`) selecionando o ambiente de execução (*runtime*) que executa a operação; `open`, `open-in` e `reveal` funcionam apenas no ambiente `local`. Além disso:
 
-| Method and path | Description |
+| Método e caminho | Descrição |
 | --- | --- |
-| `POST /api/v1/workspace/fs:search` | Session-less workspace search (the body carries the workspace reference) |
-| `POST /api/v1/workspace/fs:suggest` | Session-less file-completion candidates (for `@` file mentions) |
-| `GET /api/v1/sessions/{session_id}/fs/{path}:download` | Download a session file (binary, see below) |
-| `GET /api/v1/fs:browse` | List host directories (folder picker) |
-| `GET /api/v1/fs:home` | The user's home directory and recent workspaces |
-| `GET /api/v1/fs:content` | Raw bytes of any host file (gated only by the token — be careful when exposing the port) |
-| `POST /api/v1/fs:mkdir` | Create a directory by absolute path |
+| `POST /api/v1/workspace/fs:search` | Busca em workspace sem sessão (o corpo carrega a referência do workspace) |
+| `POST /api/v1/workspace/fs:suggest` | Candidatos de autocompletar de arquivos sem sessão (para menções a arquivos com `@`) |
+| `GET /api/v1/sessions/{session_id}/fs/{path}:download` | Baixar um arquivo de sessão (binário, veja abaixo) |
+| `GET /api/v1/fs:browse` | Listar diretórios do host (seletor de pastas) |
+| `GET /api/v1/fs:home` | O diretório home do usuário e workspaces recentes |
+| `GET /api/v1/fs:content` | Bytes brutos de qualquer arquivo do host (protegido apenas pelo token — tome cuidado ao expor a porta) |
+| `POST /api/v1/fs:mkdir` | Criar um diretório por caminho absoluto |
 
 #### `POST /api/v1/sessions/{session_id}/fs:list`
 
-Lists the entries of a session workspace directory, optionally recursing into subdirectories.
+Lista as entradas de um diretório de workspace de sessão, recursando opcionalmente em subdiretórios.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `path` | body | string | Directory to list, relative to the session work directory. Default `.` |
-| `depth` | body | integer | Recursion depth, 1–10. Default `1` |
-| `limit` | body | integer | Maximum entries, 1–1000. Default `200` |
-| `show_hidden` | body | boolean | Include dotfiles. Default `false` |
-| `follow_gitignore` | body | boolean | Skip gitignored paths. Default `true` |
-| `exclude_globs` | body | string[] | Additional globs to skip |
-| `sort` | body | string | `type_first` (default) / `name_asc` / `name_desc` / `mtime_desc` / `size_desc` |
-| `include_git_status` | body | boolean | Attach each entry's git status. Default `false` |
+| `session_id` | path | string | **Obrigatório.** ID da sessão |
+| `path` | body | string | Diretório a listar, relativo ao diretório de trabalho da sessão. Padrão `.` |
+| `depth` | body | integer | Profundidade de recursão, 1–10. Padrão `1` |
+| `limit` | body | integer | Máximo de entradas, 1–1000. Padrão `200` |
+| `show_hidden` | body | boolean | Incluir arquivos ocultos (dotfiles). Padrão `false` |
+| `follow_gitignore` | body | boolean | Ignorar caminhos presentes no `.gitignore`. Padrão `true` |
+| `exclude_globs` | body | string[] | Padrões glob adicionais a ignorar |
+| `sort` | body | string | `type_first` (padrão) / `name_asc` / `name_desc` / `mtime_desc` / `size_desc` |
+| `include_git_status` | body | boolean | Anexar o status do git de cada entrada. Padrão `false` |
 
-On success, `data` is `{ items, truncated }` — plus `children_by_path` (a path → entries map) when `depth` is greater than 1. Each item is an entry object `{ path, name, kind, size?, modified_at, etag?, mime?, language_id?, is_binary?, is_symlink_to?, git_status?, child_count? }`, where `kind` is `file` / `directory` / `symlink` and `git_status` (present only with `include_git_status: true`) is one of `clean` / `modified` / `added` / `deleted` / `renamed` / `untracked` / `ignored` / `conflicted`; `truncated` reports that `limit` cut the listing short.
+Em caso de sucesso, `data` é `{ items, truncated }` — além de `children_by_path` (um mapa de caminho → entradas) quando `depth` for maior que 1. Cada item é um objeto de entrada `{ path, name, kind, size?, modified_at, etag?, mime?, language_id?, is_binary?, is_symlink_to?, git_status?, child_count? }`, onde `kind` é `file` / `directory` / `symlink` e `git_status` (presente apenas com `include_git_status: true`) é um dentre `clean` / `modified` / `added` / `deleted` / `renamed` / `untracked` / `ignored` / `conflicted`; `truncated` indica que o `limit` cortou a listagem.
 
-- `40001`: body validation failure
-- `40401`: session not found
-- `40409`: path not found (including a `path` that is not a directory)
-- `41304`: path escapes the session workspace
+- `40001`: falha de validação do corpo
+- `40401`: sessão não encontrada
+- `40409`: caminho não encontrado (incluindo um `path` que não é um diretório)
+- `41304`: o caminho escapa do workspace da sessão
 
 #### `POST /api/v1/sessions/{session_id}/fs:read`
 
-Reads a slice of a session file as text or base64.
+Lê um trecho (*slice*) de um arquivo de sessão como texto ou base64.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `path` | body | string | **Required.** File path, relative to the session work directory |
-| `offset` | body | integer | Byte offset to start at. Default `0` |
-| `length` | body | integer | Bytes to read, 1–10485760 (10 MiB). Default `1048576` (1 MiB) |
-| `encoding` | body | string | `auto` (default) / `utf-8` / `base64` |
+| `session_id` | path | string | **Obrigatório.** ID da sessão |
+| `path` | body | string | **Obrigatório.** Caminho do arquivo, relativo ao diretório de trabalho da sessão |
+| `offset` | body | integer | Deslocamento (*offset*) em bytes para iniciar. Padrão `0` |
+| `length` | body | integer | Bytes a ler, 1–10485760 (10 MiB). Padrão `1048576` (1 MiB) |
+| `encoding` | body | string | `auto` (padrão) / `utf-8` / `base64` |
 
-On success, `data` is `{ path, content, encoding, size, truncated, etag, mime, language_id?, line_count?, is_binary }`, where `encoding` reports the encoding actually used (`utf-8` or `base64`) and `size` is the full file size. With `encoding: "auto"`, text comes back as `utf-8` (non-UTF-8 text is transcoded) and binary content as `base64`; `encoding: "utf-8"` forces text and rejects binary files.
+Em caso de sucesso, `data` é `{ path, content, encoding, size, truncated, etag, mime, language_id?, line_count?, is_binary }`, onde `encoding` informa a codificação realmente utilizada (`utf-8` ou `base64`) e `size` é o tamanho total do arquivo. Com `encoding: "auto"`, o texto retorna como `utf-8` (textos que não são UTF-8 são transcodificados) e o conteúdo binário como `base64`; `encoding: "utf-8"` força texto e rejeita arquivos binários.
 
-- `40001`: body validation failure
-- `40401`: session not found
-- `40409`: path not found
-- `40906`: path is a directory
-- `40907`: binary file requested with `encoding: "utf-8"`
-- `41302`: file exceeds the 10 MiB read ceiling
-- `41304`: path escapes the session workspace
+- `40001`: falha de validação do corpo
+- `40401`: sessão não encontrada
+- `40409`: caminho não encontrado
+- `40906`: o caminho é um diretório
+- `40907`: arquivo binário solicitado com `encoding: "utf-8"`
+- `41302`: o arquivo excede o limite de leitura de 10 MiB
+- `41304`: o caminho escapa do workspace da sessão
 
 #### `POST /api/v1/sessions/{session_id}/fs:list_many`
 
-Lists several session directories in one call; a failing path folds into the response instead of failing the whole request.
+Lista vários diretórios de sessão em uma única chamada; um caminho com falha é inserido na resposta em vez de invalidar a requisição inteira.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `paths` | body | string[] | **Required.** Directories to list, 1–100 entries |
+| `session_id` | path | string | **Obrigatório.** ID da sessão |
+| `paths` | body | string[] | **Obrigatório.** Diretórios a listar, 1–100 entradas |
 
-The remaining body fields (`depth`, `limit`, `show_hidden`, `follow_gitignore`, `exclude_globs`, `sort`, `include_git_status`) have the same types, ranges, and defaults as `fs:list`. On success, `data` is `{ results }`, a map from each requested path to its entry array (entry objects as described under `fs:list`), plus `truncated_paths` (paths whose listing hit `limit`) and `partial_errors`, a map from a failed path to its `{ code, msg }` error.
+Os campos restantes do corpo (`depth`, `limit`, `show_hidden`, `follow_gitignore`, `exclude_globs`, `sort`, `include_git_status`) possuem os mesmos tipos, intervalos e padrões de `fs:list`. Em caso de sucesso, `data` é `{ results }`, um mapa de cada caminho requisitado para seu array de entradas (objetos de entrada conforme descritos em `fs:list`), além de `truncated_paths` (caminhos cuja listagem atingiu o `limit`) e `partial_errors`, um mapa de um caminho com falha para o seu erro `{ code, msg }`.
 
-- `40001`: body validation failure
-- `40401`: session not found
+- `40001`: falha de validação do corpo
+- `40401`: sessão não encontrada
 
 #### `POST /api/v1/sessions/{session_id}/fs:stat`
 
-Stats one path in the session workspace.
+Obtém metadados (*stat*) de um caminho no workspace da sessão.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `path` | body | string | **Required.** Path to stat, relative to the session work directory |
+| `session_id` | path | string | **Obrigatório.** ID da sessão |
+| `path` | body | string | **Obrigatório.** Caminho para o stat, relativo ao diretório de trabalho da sessão |
 
-On success, `data` is the entry object described under `fs:list`.
+Em caso de sucesso, `data` é o objeto de entrada descrito em `fs:list`.
 
-- `40001`: body validation failure
-- `40401`: session not found
-- `40409`: path not found
-- `41304`: path escapes the session workspace
+- `40001`: falha de validação do corpo
+- `40401`: sessão não encontrada
+- `40409`: caminho não encontrado
+- `41304`: o caminho escapa do workspace da sessão
 
 #### `POST /api/v1/sessions/{session_id}/fs:stat_many`
 
-Stats many session paths in one call; missing paths report `null` instead of failing the request.
+Obtém metadados (*stat*) de vários caminhos de sessão em uma única chamada; caminhos ausentes retornam `null` em vez de falhar a requisição.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `paths` | body | string[] | **Required.** Paths to stat, 1–1000 entries |
+| `session_id` | path | string | **Obrigatório.** ID da sessão |
+| `paths` | body | string[] | **Obrigatório.** Caminhos para o stat, 1–1000 entradas |
 
-On success, `data` is `{ entries }`, a map from each requested path to its entry object (as described under `fs:list`) or `null` when the path does not exist.
+Em caso de sucesso, `data` é `{ entries }`, um mapa de cada caminho requisitado para seu objeto de entrada (conforme descrito em `fs:list`) ou `null` quando o caminho não existe.
 
-- `40001`: body validation failure
-- `40401`: session not found
+- `40001`: falha de validação do corpo
+- `40401`: sessão não encontrada
 
 #### `POST /api/v1/sessions/{session_id}/fs:mkdir`
 
-Creates a directory inside the session workspace.
+Cria um diretório dentro do workspace da sessão.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `path` | body | string | **Required.** Directory to create, relative to the session work directory |
-| `recursive` | body | boolean | Create missing parent directories. Default `false` |
+| `session_id` | path | string | **Obrigatório.** ID da sessão |
+| `path` | body | string | **Obrigatório.** Diretório a criar, relativo ao diretório de trabalho da sessão |
+| `recursive` | body | boolean | Criar diretórios pai ausentes. Padrão `false` |
 
-On success, `data` is the created directory's entry object (as described under `fs:list`).
+Em caso de sucesso, `data` é o objeto de entrada do diretório criado (conforme descrito em `fs:list`).
 
-- `40001`: body validation failure
-- `40401`: session not found
-- `40409`: parent directory not found (non-recursive create)
-- `40919`: path already exists (non-recursive create)
-- `41304`: path escapes the session workspace
+- `40001`: falha de validação do corpo
+- `40401`: sessão não encontrada
+- `40409`: diretório pai não encontrado (criação não recursiva)
+- `40919`: o caminho já existe (criação não recursiva)
+- `41304`: o caminho escapa do workspace da sessão
 
 #### `POST /api/v1/sessions/{session_id}/fs:search`
 
-Fuzzy-searches file and directory names across the session workspace. An empty `query` lists the top-level entries instead. When the `{session_id}` slot carries a workspace reference (a registered workspace id or an absolute root) rather than a session id, the search runs against that workspace — the session-less form for a not-yet-created draft session; the first-class session-less endpoint is `POST /api/v1/workspace/fs:search`.
+Realiza busca por aproximação (*fuzzy-search*) de nomes de arquivos e diretórios em todo o workspace da sessão. Um `query` vazio lista as entradas de nível superior. Quando o espaço `{session_id}` carrega uma referência de workspace (um ID de workspace registrado ou uma raiz absoluta) em vez de um ID de sessão, a busca é executada contra esse workspace — o formato sem sessão para uma sessão de rascunho ainda não criada; o endpoint oficial sem sessão é `POST /api/v1/workspace/fs:search`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id, or a workspace reference |
-| `query` | body | string | **Required.** Search text; `""` lists the top level |
-| `limit` | body | integer | Maximum hits, 1–200. Default `50` |
-| `include_globs` | body | string[] | Only paths matching one of these globs |
-| `exclude_globs` | body | string[] | Skip paths matching these globs |
-| `follow_gitignore` | body | boolean | Skip gitignored paths. Default `true` |
+| `session_id` | path | string | **Obrigatório.** ID da sessão ou referência de workspace |
+| `query` | body | string | **Obrigatório.** Texto de busca; `""` lista o nível superior |
+| `limit` | body | integer | Máximo de ocorrências, 1–200. Padrão `50` |
+| `include_globs` | body | string[] | Apenas caminhos correspondentes a um destes globs |
+| `exclude_globs` | body | string[] | Ignorar caminhos correspondentes a estes globs |
+| `follow_gitignore` | body | boolean | Ignorar caminhos presentes no `.gitignore`. Padrão `true` |
 
-On success, `data` is `{ items, truncated }` where each item is `{ path, name, kind, score, match_positions }` — `kind` is `file` / `directory` / `symlink`, `score` is the fuzzy-match score between 0 and 1, and `match_positions` lists the matched character offsets. Hits sort by score (ties by path), and `truncated` reports that hits beyond `limit` were dropped.
+Em caso de sucesso, `data` é `{ items, truncated }` onde cada item é `{ path, name, kind, score, match_positions }` — `kind` é `file` / `directory` / `symlink`, `score` é a pontuação da busca por aproximação entre 0 e 1, e `match_positions` lista os deslocamentos dos caracteres correspondentes. As ocorrências são ordenadas por pontuação (desempate por caminho), e `truncated` indica que ocorrências além do `limit` foram descartadas.
 
-- `40001`: body validation failure
-- `40401`: neither a session nor a resolvable workspace with that reference
+- `40001`: falha de validação do corpo
+- `40401`: não é uma sessão nem um workspace resolvível com essa referência
 
 #### `POST /api/v1/sessions/{session_id}/fs:grep`
 
-Searches file contents across the session workspace — a literal string by default, a regular expression with `regex: true`.
+Pesquisa conteúdos de arquivos em todo o workspace da sessão — por padrão uma string literal, ou uma expressão regular com `regex: true`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `pattern` | body | string | **Required.** Text or regex to search for |
-| `regex` | body | boolean | Treat `pattern` as a regular expression. Default `false` |
-| `case_sensitive` | body | boolean | Default `true` |
-| `include_globs` | body | string[] | Only files matching one of these globs |
-| `exclude_globs` | body | string[] | Skip files matching these globs |
-| `follow_gitignore` | body | boolean | Skip gitignored paths. Default `true` |
-| `max_files` | body | integer | Files to scan at most, 1–10000. Default `200` |
-| `max_matches_per_file` | body | integer | Matches kept per file, 1–10000. Default `50` |
-| `max_total_matches` | body | integer | Matches kept overall, 1–100000. Default `5000` |
-| `context_lines` | body | integer | Context lines around each match, 0–10. Default `2` |
+| `session_id` | path | string | **Obrigatório.** ID da sessão |
+| `pattern` | body | string | **Obrigatório.** Texto ou expressão regular a ser pesquisada |
+| `regex` | body | boolean | Tratar `pattern` como expressão regular. Padrão `false` |
+| `case_sensitive` | body | boolean | Distinguir maiúsculas de minúsculas (*case sensitive*). Padrão `true` |
+| `include_globs` | body | string[] | Apenas arquivos correspondentes a um destes globs |
+| `exclude_globs` | body | string[] | Ignorar arquivos correspondentes a estes globs |
+| `follow_gitignore` | body | boolean | Ignorar caminhos presentes no `.gitignore`. Padrão `true` |
+| `max_files` | body | integer | Máximo de arquivos a varrer, 1–10000. Padrão `200` |
+| `max_matches_per_file` | body | integer | Ocorrências mantidas por arquivo, 1–10000. Padrão `50` |
+| `max_total_matches` | body | integer | Ocorrências mantidas no total, 1–100000. Padrão `5000` |
+| `context_lines` | body | integer | Linhas de contexto ao redor de cada ocorrência, 0–10. Padrão `2` |
 
-On success, `data` is `{ files, files_scanned, truncated, elapsed_ms }` where each entry of `files` is `{ path, matches }` and each match is `{ line, col, text, before, after }` (`before` / `after` carry up to `context_lines` surrounding lines); `truncated` reports that one of the match budgets cut the results short.
+Em caso de sucesso, `data` é `{ files, files_scanned, truncated, elapsed_ms }` onde cada entrada de `files` é `{ path, matches }` e cada ocorrência é `{ line, col, text, before, after }` (`before` / `after` contêm até `context_lines` linhas ao redor); `truncated` indica que um dos limites de orçamento de ocorrências encerrou os resultados antecipadamente.
 
-- `40001`: body validation failure
-- `40401`: session not found
-- `41305`: the search timed out
+- `40001`: falha de validação do corpo
+- `40401`: sessão não encontrada
+- `41305`: a busca esgotou o tempo limite (*timeout*)
 
 #### `POST /api/v1/sessions/{session_id}/fs:git_status`
 
-Reads the git status of the session workspace, optionally restricted to a set of paths.
+Lê o status do git do workspace da sessão, restrito opcionalmente a um conjunto de caminhos.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `paths` | body | string[] | Restrict the status to these paths; omitted means the whole workspace |
+| `session_id` | path | string | **Obrigatório.** ID da sessão |
+| `paths` | body | string[] | Restringir o status a estes caminhos; omitido significa o workspace inteiro |
 
-On success, `data` is `{ branch, ahead, behind, entries, additions, deletions, pullRequest }` where `entries` maps each changed path to its status (`clean` / `modified` / `added` / `deleted` / `renamed` / `untracked` / `ignored` / `conflicted`) and `pullRequest` is `{ number, state, url }` (`state` is `open` / `merged` / `closed` / `draft`) or `null`.
+Em caso de sucesso, `data` é `{ branch, ahead, behind, entries, additions, deletions, pullRequest }` onde `entries` mapeia cada caminho alterado para seu status (`clean` / `modified` / `added` / `deleted` / `renamed` / `untracked` / `ignored` / `conflicted`) e `pullRequest` é `{ number, state, url }` (`state` é `open` / `merged` / `closed` / `draft`) ou `null`.
 
-- `40001`: body validation failure
-- `40401`: session not found
-- `40908`: git is unavailable (not a repository, or no git binary)
+- `40001`: falha de validação do corpo
+- `40401`: sessão não encontrada
+- `40908`: o git está indisponível (não é um repositório ou não há binário do git)
 
 #### `POST /api/v1/sessions/{session_id}/fs:diff`
 
-Returns the unified git diff of one file in the session workspace.
+Retorna o diff unificado do git de um arquivo no workspace da sessão.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `path` | body | string | **Required.** File to diff, relative to the session work directory |
+| `session_id` | path | string | **Obrigatório.** ID da sessão |
+| `path` | body | string | **Obrigatório.** Arquivo para o diff, relativo ao diretório de trabalho da sessão |
 
-On success, `data` is `{ path, diff, truncated }` where `diff` is the unified diff text and `truncated` reports an over-long diff cut short.
+Em caso de sucesso, `data` é `{ path, diff, truncated }` onde `diff` é o texto do diff unificado e `truncated` indica um diff excessivamente longo cortado.
 
-- `40001`: body validation failure
-- `40401`: session not found
-- `40908`: git is unavailable (not a repository, or no git binary)
-- `41304`: path escapes the session workspace
+- `40001`: falha de validação do corpo
+- `40401`: sessão não encontrada
+- `40908`: o git está indisponível (não é um repositório ou não há binário do git)
+- `41304`: o caminho escapa do workspace da sessão
 
 #### `POST /api/v1/sessions/{session_id}/fs:open`
 
-Opens a session file with the host operating system's default handler. Local runtime only.
+Abre um arquivo de sessão com o manipulador padrão do sistema operacional do host. Exclusivo para o ambiente local (*local runtime*).
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `path` | body | string | **Required.** File to open, relative to the session work directory |
-| `line` | body | integer | Line number to jump to where the handler supports it (positive integer) |
+| `session_id` | path | string | **Obrigatório.** ID da sessão |
+| `path` | body | string | **Obrigatório.** Arquivo a abrir, relativo ao diretório de trabalho da sessão |
+| `line` | body | integer | Número da linha para saltar onde o manipulador suportar (inteiro positivo) |
 
-On success, `data` is `{ opened: true }`.
+Em caso de sucesso, `data` é `{ opened: true }`.
 
-- `40001`: body validation failure
-- `40401`: session not found
-- `40409`: path not found
-- `41304`: path escapes the session workspace
+- `40001`: falha de validação do corpo
+- `40401`: sessão não encontrada
+- `40409`: caminho não encontrado
+- `41304`: o caminho escapa do workspace da sessão
 
 #### `POST /api/v1/sessions/{session_id}/fs:open-in`
 
-Opens a session file or directory in a specific host application. Local runtime only.
+Abre um arquivo ou diretório de sessão em um aplicativo específico do host. Exclusivo para o ambiente local.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `app_id` | body | string | **Required.** Target application: `finder` / `cursor` / `vscode` / `iterm` / `terminal` |
-| `path` | body | string | **Required.** File or directory to open, relative to the session work directory |
-| `line` | body | integer | Line number to jump to where the application supports it (positive integer) |
+| `session_id` | path | string | **Obrigatório.** ID da sessão |
+| `app_id` | body | string | **Obrigatório.** Aplicativo de destino: `finder` / `cursor` / `vscode` / `iterm` / `terminal` |
+| `path` | body | string | **Obrigatório.** Arquivo ou diretório a abrir, relativo ao diretório de trabalho da sessão |
+| `line` | body | integer | Número da linha para saltar onde o aplicativo suportar (inteiro positivo) |
 
-On success, `data` is `{ opened: true }`.
+Em caso de sucesso, `data` é `{ opened: true }`.
 
-- `40001`: body validation failure
-- `40401`: session not found
-- `40409`: path not found
-- `41304`: path escapes the session workspace
-- `50001`: the application failed to launch
+- `40001`: falha de validação do corpo
+- `40401`: sessão não encontrada
+- `40409`: caminho não encontrado
+- `41304`: o caminho escapa do workspace da sessão
+- `50001`: falha ao iniciar o aplicativo
 
 #### `POST /api/v1/sessions/{session_id}/fs:reveal`
 
-Reveals a session file in the host operating system's file manager. Local runtime only.
+Revela um arquivo de sessão no gerenciador de arquivos do sistema operacional do host. Exclusivo para o ambiente local.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `path` | body | string | **Required.** File to reveal, relative to the session work directory |
+| `session_id` | path | string | **Obrigatório.** ID da sessão |
+| `path` | body | string | **Obrigatório.** Arquivo a revelar, relativo ao diretório de trabalho da sessão |
 
-On success, `data` is `{ revealed: true }`.
+Em caso de sucesso, `data` é `{ revealed: true }`.
 
-- `40001`: body validation failure
-- `40401`: session not found
-- `40409`: path not found
-- `41304`: path escapes the session workspace
+- `40001`: falha de validação do corpo
+- `40401`: sessão não encontrada
+- `40409`: caminho não encontrado
+- `41304`: o caminho escapa do workspace da sessão
 
 #### `GET /api/v1/sessions/{session_id}/fs/{path}:download`
 
-Downloads a file from the session workspace; `{path}` is the workspace-relative file path with the literal `:download` suffix. The response is a binary stream with range and ETag support — see [Binary and streaming endpoints](#binary-and-streaming-endpoints).
+Baixa um arquivo do workspace da sessão; `{path}` é o caminho do arquivo relativo ao workspace com o sufixo literal `:download`. A resposta é um fluxo binário (*binary stream*) com suporte a intervalo (*range*) e ETag — consulte [Endpoints binários e de streaming](#endpoints-binários-e-de-streaming).
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `session_id` | path | string | **Required.** Session id |
-| `path` | path | string | **Required.** Workspace-relative file path plus the `:download` suffix |
-| `runtime_id` | query | string | Runtime to read from. Default `local` |
+| `session_id` | path | string | **Obrigatório.** ID da sessão |
+| `path` | path | string | **Obrigatório.** Caminho do arquivo relativo ao workspace acrescido do sufixo `:download` |
+| `runtime_id` | query | string | Ambiente de execução para leitura. Padrão `local` |
 
-- `40001`: missing or empty path
-- `40401`: session not found
-- `40409`: path not found
-- `41304`: path escapes the session workspace
+- `40001`: caminho ausente ou vazio
+- `40401`: sessão não encontrada
+- `40409`: caminho não encontrado
+- `41304`: o caminho escapa do workspace da sessão
 
 #### `POST /api/v1/workspace/fs:search`
 
-The session-less form of `fs:search`: the workspace travels in the body instead of the URL.
+A forma sem sessão de `fs:search`: o workspace trafega no corpo da requisição em vez da URL.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `workspace` | body | string | **Required.** Registered workspace id or absolute root (registered on the spot) |
-| `query` | body | string | **Required.** Search text; `""` lists the top level |
-| `limit` | body | integer | Maximum hits, 1–200. Default `50` |
-| `include_globs` | body | string[] | Only paths matching one of these globs |
-| `exclude_globs` | body | string[] | Skip paths matching these globs |
-| `follow_gitignore` | body | boolean | Skip gitignored paths. Default `true` |
-| `runtime_id` | body | string | Runtime to search on. Default `local` |
+| `workspace` | body | string | **Obrigatório.** ID de workspace registrado ou raiz absoluta (registrada no momento) |
+| `query` | body | string | **Obrigatório.** Texto de busca; `""` lista o nível superior |
+| `limit` | body | integer | Máximo de ocorrências, 1–200. Padrão `50` |
+| `include_globs` | body | string[] | Apenas caminhos correspondentes a um destes globs |
+| `exclude_globs` | body | string[] | Ignorar caminhos correspondentes a estes globs |
+| `follow_gitignore` | body | boolean | Ignorar caminhos presentes no `.gitignore`. Padrão `true` |
+| `runtime_id` | body | string | Ambiente de execução para realizar a busca. Padrão `local` |
 
-On success, `data` is `{ items, truncated }` with the same hit shape and ordering as `fs:search`.
+Em caso de sucesso, `data` é `{ items, truncated }` com a mesma estrutura de ocorrências e ordenação de `fs:search`.
 
-- `40001`: body validation failure
-- `40410`: workspace not found and not a usable absolute path
+- `40001`: falha de validação do corpo
+- `40410`: workspace não encontrado e não é um caminho absoluto utilizável
 
 #### `POST /api/v1/workspace/fs:suggest`
 
-Suggests file and directory completion candidates in a workspace without a session — the backend for `@` file mentions in the composer.
+Sugere candidatos de autocompletar de arquivos e diretórios em um workspace sem sessão — o backend para menções a arquivos com `@` no compositor.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `workspace` | body | string | **Required.** Registered workspace id or absolute root (registered on the spot) |
-| `query` | body | string | **Required.** Partial path text to complete |
-| `limit` | body | integer | Maximum candidates, 1–200. Default `50` |
-| `follow_gitignore` | body | boolean | Skip gitignored paths. Default `true` |
-| `show_hidden` | body | boolean | Include dotfiles. Default `false` |
-| `include_globs` | body | string[] | Only paths matching one of these globs |
-| `exclude_globs` | body | string[] | Skip paths matching these globs |
-| `runtime_id` | body | string | Runtime to complete on. Default `local` |
+| `workspace` | body | string | **Obrigatório.** ID de workspace registrado ou raiz absoluta (registrada no momento) |
+| `query` | body | string | **Obrigatório.** Texto de caminho parcial para autocompletar |
+| `limit` | body | integer | Máximo de candidatos, 1–200. Padrão `50` |
+| `follow_gitignore` | body | boolean | Ignorar caminhos presentes no `.gitignore`. Padrão `true` |
+| `show_hidden` | body | boolean | Incluir arquivos ocultos (dotfiles). Padrão `false` |
+| `include_globs` | body | string[] | Apenas caminhos correspondentes a um destes globs |
+| `exclude_globs` | body | string[] | Ignorar caminhos correspondentes a estes globs |
+| `runtime_id` | body | string | Ambiente de execução para autocompletar. Padrão `local` |
 
-On success, `data` is `{ items, truncated }` where each item is `{ path, name, kind, score, match_positions }`, the same hit shape as `fs:search`.
+Em caso de sucesso, `data` é `{ items, truncated }` onde cada item é `{ path, name, kind, score, match_positions }`, a mesma estrutura de ocorrências de `fs:search`.
 
-- `40001`: body validation failure
-- `40410`: workspace not found and not a usable absolute path
+- `40001`: falha de validação do corpo
+- `40410`: workspace não encontrado e não é um caminho absoluto utilizável
 
 #### `GET /api/v1/fs:browse`
 
-Lists the subdirectories of one host directory — the backend of the folder picker.
+Lista os subdiretórios de um diretório do host — o backend do seletor de pastas.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `path` | query | string | Absolute directory path. Default the user's home directory |
+| `path` | query | string | Caminho absoluto do diretório. O padrão é o diretório home do usuário |
 
-On success, `data` is `{ path, parent, entries }` where `path` is the resolved directory, `parent` its parent (`null` at the filesystem root), and each entry is `{ name, path, is_dir: true }`.
+Em caso de sucesso, `data` é `{ path, parent, entries }` onde `path` é o diretório resolvido, `parent` é o seu diretório pai (`null` na raiz do sistema de arquivos), e cada entrada é `{ name, path, is_dir: true }`.
 
-- `40001`: `path` is not absolute
-- `40409`: path not found
-- `40411`: permission denied
+- `40001`: `path` não é absoluto
+- `40409`: caminho não encontrado
+- `40411`: permissão negada
 
 #### `GET /api/v1/fs:home`
 
-Returns the folder picker's landing payload. No parameters.
+Retorna os dados iniciais (*landing payload*) do seletor de pastas. Sem parâmetros.
 
-On success, `data` is `{ home, recent_roots }` where `home` is the user's home directory and `recent_roots` lists the roots of the registered workspaces.
+Em caso de sucesso, `data` é `{ home, recent_roots }` onde `home` é o diretório home do usuário e `recent_roots` lista as raízes dos workspaces registrados.
 
 #### `GET /api/v1/fs:content`
 
-Streams the raw bytes of any file on the host filesystem — gated only by the API token, so be careful when exposing the port. Range requests and ETag caching are supported; see [Binary and streaming endpoints](#binary-and-streaming-endpoints).
+Transmite os bytes brutos de qualquer arquivo no sistema de arquivos do host — protegido apenas pelo token — tome cuidado ao expor a porta. Requisições por intervalo (*Range requests*) e cache via ETag são suportados; consulte [Endpoints binários e de streaming](#endpoints-binários-e-de-streaming).
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `path` | query | string | **Required.** Absolute file path |
+| `path` | query | string | **Obrigatório.** Caminho absoluto do arquivo |
 
-- `40001`: `path` is not absolute, or not a regular file
-- `40409`: path not found
-- `40411`: permission denied
-- `40906`: path is a directory
+- `40001`: `path` não é absoluto ou não é um arquivo regular
+- `40409`: caminho não encontrado
+- `40411`: permissão negada
+- `40906`: o caminho é um diretório
 
 #### `POST /api/v1/fs:mkdir`
 
-Creates one directory on the host filesystem by absolute path — the folder picker's "new folder" backend. Non-recursive: the parent directory must already exist.
+Cria um diretório no sistema de arquivos do host por caminho absoluto — o backend de "nova pasta" do seletor de pastas. Não recursivo: o diretório pai já deve existir.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `path` | body | string | **Required.** Absolute directory path |
+| `path` | body | string | **Obrigatório.** Caminho absoluto do diretório |
 
-On success, `data` is `{ path }`.
+Em caso de sucesso, `data` é `{ path }`.
 
-- `40001`: `path` is not absolute
-- `40409`: parent path not found
-- `40411`: permission denied
-- `40919`: path already exists
+- `40001`: `path` não é absoluto
+- `40409`: caminho pai não encontrado
+- `40411`: permissão negada
+- `40919`: o caminho já existe
 
-### File uploads
+### Uploads de arquivos (`File uploads`)
 
-| Method and path | Description |
+| Método e caminho | Descrição |
 | --- | --- |
-| `POST /api/v1/files` | Multipart upload (`file` field, optional `name` and `expires_in_sec`); returns file metadata |
-| `GET /api/v1/files/{file_id}` | Download (binary; errors use real HTTP statuses) |
-| `DELETE /api/v1/files/{file_id}` | Delete |
+| `POST /api/v1/files` | Upload multipart (campo `file`, opcionais `name` e `expires_in_sec`); retorna metadados do arquivo |
+| `GET /api/v1/files/{file_id}` | Download (binário; erros usam status HTTP reais) |
+| `DELETE /api/v1/files/{file_id}` | Excluir |
 
 #### `POST /api/v1/files`
 
-Uploads a file as `multipart/form-data` for later reference (for example as a prompt attachment).
+Faz o upload de um arquivo como `multipart/form-data` para referência posterior (por exemplo, como anexo de prompt).
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `file` | body | binary | **Required.** The multipart file part |
-| `name` | body | string | Stored display name. Default the uploaded filename |
-| `expires_in_sec` | body | number | Seconds until the file expires (non-negative). Default never expires |
+| `file` | body | binary | **Obrigatório.** A parte de arquivo multipart |
+| `name` | body | string | Nome de exibição armazenado. O padrão é o nome do arquivo enviado |
+| `expires_in_sec` | body | number | Segundos até o arquivo expirar (não negativo). O padrão é nunca expirar |
 
-On success, `data` is the file metadata `{ id, name, media_type, size, created_at, expires_at? }` with `media_type` taken from the upload's content type.
+Em caso de sucesso, `data` é o metadado do arquivo `{ id, name, media_type, size, created_at, expires_at? }` com `media_type` obtido do tipo de conteúdo do upload.
 
-- `40001`: the multipart body has no `file` field
+- `40001`: o corpo multipart não possui o campo `file`
 
 #### `GET /api/v1/files/{file_id}`
 
-Downloads an uploaded file. The response is a binary stream that honors range requests but ignores `If-None-Match`; failures use real HTTP statuses — see [Binary and streaming endpoints](#binary-and-streaming-endpoints).
+Baixa um arquivo enviado. A resposta é um fluxo binário que honra requisições de intervalo (*range requests*), mas ignora `If-None-Match`; falhas utilizam status HTTP reais — consulte [Endpoints binários e de streaming](#endpoints-binários-e-de-streaming).
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `file_id` | path | string | **Required.** File id from the upload response |
+| `file_id` | path | string | **Obrigatório.** ID do arquivo retornado na resposta do upload |
 
-- `40407` (HTTP 404): no file with that id (including an expired file)
+- `40407` (HTTP 404): nenhum arquivo com esse ID (incluindo arquivo expirado)
 
 #### `DELETE /api/v1/files/{file_id}`
 
-Deletes an uploaded file.
+Exclui um arquivo enviado.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `file_id` | path | string | **Required.** File id from the upload response |
+| `file_id` | path | string | **Obrigatório.** ID do arquivo retornado na resposta do upload |
 
-On success, `data` is `{ deleted: true }`.
+Em caso de sucesso, `data` é `{ deleted: true }`.
 
-- `40407` (HTTP 404): no file with that id
+- `40407` (HTTP 404): nenhum arquivo com esse ID
 
-### GUI store
+### Armazenamento da GUI (`GUI store`)
 
-A server-backed key/value store that mirrors the browser `localStorage` interface, persisted under the server's home directory; the web UI keeps cross-client UI state here. Values are opaque strings — serialization is the caller's job.
+Um armazenamento de chave/valor respaldado pelo servidor que espelha a interface `localStorage` do navegador, persistido sob o diretório home do servidor; a UI web mantém o estado de interface entre clientes aqui. Os valores são strings opacas — a serialização é responsabilidade do chamador.
 
-| Method and path | Description |
+| Método e caminho | Descrição |
 | --- | --- |
-| `GET /api/v1/gui/store/length` | Number of stored keys |
-| `GET /api/v1/gui/store/getItem` | Read a value by key |
-| `POST /api/v1/gui/store/setItem` | Write a value by key |
-| `POST /api/v1/gui/store/removeItem` | Delete a value by key |
-| `POST /api/v1/gui/store/clear` | Delete all values |
+| `GET /api/v1/gui/store/length` | Número de chaves armazenadas |
+| `GET /api/v1/gui/store/getItem` | Ler um valor por chave |
+| `POST /api/v1/gui/store/setItem` | Escrever um valor por chave |
+| `POST /api/v1/gui/store/removeItem` | Excluir um valor por chave |
+| `POST /api/v1/gui/store/clear` | Excluir todos os valores |
 
 #### `GET /api/v1/gui/store/length`
 
-Returns the number of stored keys (mirrors `localStorage.length`). No parameters.
+Retorna o número de chaves armazenadas (espelha `localStorage.length`). Sem parâmetros.
 
-On success, `data` is `{ length }`.
+Em caso de sucesso, `data` é `{ length }`.
 
 #### `GET /api/v1/gui/store/getItem`
 
-Reads one value (mirrors `localStorage.getItem`).
+Lê um valor (espelha `localStorage.getItem`).
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `key` | query | string | **Required.** Key to read, 1–256 characters |
+| `key` | query | string | **Obrigatório.** Chave a ler, 1–256 caracteres |
 
-On success, `data` is `{ value }`, the stored string or `null` when the key does not exist.
+Em caso de sucesso, `data` é `{ value }`, a string armazenada ou `null` quando a chave não existir.
 
 #### `POST /api/v1/gui/store/setItem`
 
-Writes one value (mirrors `localStorage.setItem`).
+Escreve um valor (espelha `localStorage.setItem`).
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `key` | body | string | **Required.** Key to write, 1–256 characters |
-| `value` | body | string | **Required.** Value to store |
+| `key` | body | string | **Obrigatório.** Chave a escrever, 1–256 caracteres |
+| `value` | body | string | **Obrigatório.** Valor a armazenar |
 
-On success, `data` is `null`.
+Em caso de sucesso, `data` é `null`.
 
 #### `POST /api/v1/gui/store/removeItem`
 
-Deletes one value (mirrors `localStorage.removeItem`).
+Exclui um valor (espelha `localStorage.removeItem`).
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `key` | body | string | **Required.** Key to delete, 1–256 characters |
+| `key` | body | string | **Obrigatório.** Chave a excluir, 1–256 caracteres |
 
-On success, `data` is `null`.
+Em caso de sucesso, `data` é `null`.
 
 #### `POST /api/v1/gui/store/clear`
 
-Deletes every stored value (mirrors `localStorage.clear`). No parameters.
+Exclui todos os valores armazenados (espelha `localStorage.clear`). Sem parâmetros.
 
-On success, `data` is `null`.
+Em caso de sucesso, `data` é `null`.
 
-### Global search and misc
+### Busca global e diversos (`Global search and misc`)
 
-| Method and path | Description |
+| Método e caminho | Descrição |
 | --- | --- |
-| `POST /api/v1/search` | Cross-session full-text search; `mode` is `terms` (default) or `literal` (exact substring); `page_token` pagination |
-| `GET /api/v1/connections` | List live WebSocket connections |
-| `GET /api/v2/sessions` | Next-generation session list, see below |
-| `POST /api/v2/sessions:archive` | Batch-archive sessions, see below |
-| `POST /api/v2/sessions:restore` | Batch-restore archived sessions, see below |
-| `/api/v2/mcp/*` | Unified MCP management plane, see below |
-| `/api/v1/debug/*` | Reflection debug RPC; mounted only with `--debug-endpoints` on loopback, not a stable protocol |
+| `POST /api/v1/search` | Busca de texto completo entre sessões (*cross-session full-text search*); `mode` é `terms` (padrão) ou `literal` (substring exata); paginação via `page_token` |
+| `GET /api/v1/connections` | Listar conexões WebSocket ativas |
+| `GET /api/v2/sessions` | Lista de sessões de nova geração, veja abaixo |
+| `POST /api/v2/sessions:archive` | Arquivamento em lote de sessões, veja abaixo |
+| `POST /api/v2/sessions:restore` | Restauração em lote de sessões arquivadas, veja abaixo |
+| `/api/v2/mcp/*` | Plano de gerenciamento unificado de MCP, veja abaixo |
+| `/api/v1/debug/*` | RPC de depuração/reflexão; montado apenas com `--debug-endpoints` em loopback, não é um protocolo estável |
 
 #### `POST /api/v1/search`
 
-Cross-session full-text search over user messages, assistant replies, and session titles, backed by the server's persistent search index. When `container.session_id` names a session live in this server process, the search instead scans that session's in-memory transcript directly, and the response's `source` field (`index` or `live`) reports which path served the page.
+Busca de texto completo entre sessões em mensagens de usuários, respostas de assistentes e títulos de sessão, respaldada pelo índice de busca persistente do servidor. Quando `container.session_id` aponta para uma sessão ativa neste processo de servidor, a busca varre diretamente a transcrição em memória dessa sessão, e o campo `source` da resposta (`index` ou `live`) indica qual caminho atendeu à página.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `query` | body | string | **Required.** Search text |
-| `mode` | body | string | `terms` (default) / `literal` |
-| `op` | body | string | Term combiner in `terms` mode: `AND` (default) / `OR` |
-| `container` | body | object | Restrict the search to `{ session_id?, agent_id? }` |
-| `role` | body | string | Restrict to `user` / `assistant` / `title` hits |
-| `start_time` | body | integer | Only hits at or after this time (epoch milliseconds) |
-| `end_time` | body | integer | Only hits at or before this time (epoch milliseconds) |
-| `sort` | body | string | `score` (default) / `time_desc` / `time_asc`; ignored by `literal` mode, which always returns newest-first |
-| `page_size` | body | integer | Hits per page, 1–50. Default `20` |
-| `page_token` | body | string | Token from the previous page's response |
+| `query` | body | string | **Obrigatório.** Texto de busca |
+| `mode` | body | string | `terms` (padrão) / `literal` |
+| `op` | body | string | Combinador de termos no modo `terms`: `AND` (padrão) / `OR` |
+| `container` | body | object | Restringir a busca a `{ session_id?, agent_id? }` |
+| `role` | body | string | Restringir a ocorrências de `user` / `assistant` / `title` |
+| `start_time` | body | integer | Apenas ocorrências a partir deste horário (milissegundos de época) |
+| `end_time` | body | integer | Apenas ocorrências até este horário (milissegundos de época) |
+| `sort` | body | string | `score` (padrão) / `time_desc` / `time_asc`; ignorado pelo modo `literal`, que sempre retorna do mais recente para o mais antigo |
+| `page_size` | body | integer | Ocorrências por página, 1–50. Padrão `20` |
+| `page_token` | body | string | Token da resposta da página anterior |
 
-In `terms` mode the query is tokenized (ASCII words plus CJK n-grams), deduplicated, and matched against the inverted index with at most 32 terms; `literal` mode is an exact substring search with zero false positives. On success, `data` is `{ items, has_more, page_token?, index_state, source }` where each item is `{ session_id, workspace_id, session_title, agent_id, role, snippet, time, turn?, step_id?, score }`. `index_state` is `{ state, indexed_sessions, total_sessions, documents, stale?, degraded? }` with `state` one of `building` / `ready` / `readonly`; `stale` marks a behind view still catching up, and `degraded` carries the last refresh failure. An over-budget page additionally carries `incomplete`, one of `candidate_cap` / `postings_budget` / `deadline`. Page tokens pin the index generation and the query conditions — a rebuild or a changed query invalidates them.
+No modo `terms`, a consulta é tokenizada (palavras em ASCII mais n-gramas CJK), deduplicada e combinada com o índice invertido usando no máximo 32 termos; o modo `literal` é uma busca de substring exata com zero falsos positivos. Em caso de sucesso, `data` é `{ items, has_more, page_token?, index_state, source }` onde cada item é `{ session_id, workspace_id, session_title, agent_id, role, snippet, time, turn?, step_id?, score }`. `index_state` é `{ state, indexed_sessions, total_sessions, documents, stale?, degraded? }` com `state` sendo um dentre `building` / `ready` / `readonly`; `stale` sinaliza uma visão atrasada que ainda está se atualizando, e `degraded` carrega a falha da última atualização. Uma página que exceda o orçamento carrega adicionalmente `incomplete`, sendo um dentre `candidate_cap` / `postings_budget` / `deadline`. Tokens de página fixam a geração do índice e as condições de consulta — uma reconstrução ou uma consulta alterada os invalida.
 
-- `40001`: body validation failure, an unusable query (empty, or more than 32 terms), or an invalid page token
+- `40001`: falha de validação do corpo, consulta inutilizável (vazia ou com mais de 32 termos) ou token de página inválido
 
 #### `GET /api/v1/connections`
 
-Lists the WebSocket clients currently connected to this server, oldest connection first. No parameters.
+Lista os clientes WebSocket atualmente conectados a este servidor, ordenados da conexão mais antiga para a mais recente. Sem parâmetros.
 
-On success, `data` is `{ connections }` where each item is `{ id, connected_at, remote_address, user_agent, has_client_hello, subscriptions }`: `connected_at` is an ISO 8601 timestamp, `remote_address` and `user_agent` are `null` when unknown, `has_client_hello` reports whether the client sent its handshake frame, and `subscriptions` lists the session ids the connection is subscribed to.
+Em caso de sucesso, `data` é `{ connections }` onde cada item é `{ id, connected_at, remote_address, user_agent, has_client_hello, subscriptions }`: `connected_at` é um timestamp ISO 8601, `remote_address` e `user_agent` são `null` quando desconhecidos, `has_client_hello` indica se o cliente enviou seu quadro de handshake, e `subscriptions` lista os IDs de sessão aos quais a conexão está inscrita.
 
 ### `GET /api/v2/sessions`
 
-A next-generation session query for list views — filtering, sorting, and field groups all travel in query parameters:
+Uma consulta de sessão de nova geração para visualizações em lista — filtragem, ordenação e grupos de campos trafegam em parâmetros de query:
 
-| Parameter | Description |
+| Parâmetro | Descrição |
 | --- | --- |
-| `workspace.id` | Filter by workspace; repeatable |
-| `activity.status` | Filter by activity status: `running` / `approval` / `question` / `failed` / `idle`; repeatable |
-| `meta.updated_after` | Only sessions updated after this time (epoch milliseconds) |
-| `meta.updated_before` | Only sessions updated before this time (epoch milliseconds) |
-| `meta.archived` | `true` / `false` (default) / `all` |
-| `meta.has_prompt` | `true` keeps only sessions that carry a user prompt, `false` keeps only empty ones (the `exclude_empty` equivalent of `GET /api/v1/sessions`) |
-| `view` | `flat` (default) / `by_workspace`, see below |
-| `group.page_size` | Sessions returned per workspace under `view=by_workspace`: 1–100, default 5 (up to 10000 with the `id,archived` projection); rejected without the grouped view (`40001`) |
-| `sort` | `meta.updated_at_desc` (default) / `meta.updated_at_asc` / `meta.created_at_desc` |
-| `include` | Comma-separated extra field groups; currently only `git` (branch and PR info, deduplicated per directory and cached for 60 seconds) |
-| `fields` | Comma-separated item projection; currently only `id,archived`, trimming each item to `{ id, archived }` (select-all-matching flows). Not combinable with `include=git` (`40001`) |
-| `page_size` | 1–100, default 50; up to 10000 with the `id,archived` projection. Under `view=by_workspace` it counts groups per page |
-| `page_token` | Pagination token from the previous page |
-| `page` | Stateless 1-based page number; mutually exclusive with `page_token` (`40001` when combined) |
+| `workspace.id` | Filtrar por workspace; repetível |
+| `activity.status` | Filtrar por status de atividade: `running` / `approval` / `question` / `failed` / `idle`; repetível |
+| `meta.updated_after` | Apenas sessões atualizadas após este horário (milissegundos de época) |
+| `meta.updated_before` | Apenas sessões atualizadas antes deste horário (milissegundos de época) |
+| `meta.archived` | `true` / `false` (padrão) / `all` |
+| `meta.has_prompt` | `true` mantém apenas sessões que contêm um prompt de usuário, `false` mantém apenas as vazias (o equivalente a `exclude_empty` do `GET /api/v1/sessions`) |
+| `view` | `flat` (padrão) / `by_workspace`, veja abaixo |
+| `group.page_size` | Sessões retornadas por workspace sob `view=by_workspace`: 1–100, padrão 5 (até 10000 com a projeção `id,archived`); rejeitado sem a visualização agrupada (`40001`) |
+| `sort` | `meta.updated_at_desc` (padrão) / `meta.updated_at_asc` / `meta.created_at_desc` |
+| `include` | Grupos de campos extras separados por vírgula; atualmente apenas `git` (informações de branch e PR, deduplicadas por diretório e armazenadas em cache por 60 segundos) |
+| `fields` | Projeção de itens separada por vírgula; atualmente apenas `id,archived`, reduzindo cada item a `{ id, archived }` (fluxos de seleção de todos os correspondentes). Incompatível com `include=git` (`40001`) |
+| `page_size` | 1–100, padrão 50; até 10000 com a projeção `id,archived`. Sob `view=by_workspace`, conta grupos por página |
+| `page_token` | Token de paginação da página anterior |
+| `page` | Número de página apátrida baseado em 1; mutuamente exclusivo com `page_token` (`40001` quando combinados) |
 
-Every response item carries the `workspace`, `meta`, and `activity` groups, plus `git` when `include=git` — or just `{ id, archived }` under `fields=id,archived`. The `activity` group also reports `model`: the session's bound model alias while it is live in this process, `null` for cold (not currently loaded) sessions. Every page additionally carries `total`, the size of the filtered set. The page token binds the first page's query conditions (including the projection); changing them mid-pagination returns `40922`. `page` mode is a stateless alternative for jumping to arbitrary pages: every request is an independent snapshot, no token is minted, and `next_page_token` is always `null`.
+Cada item de resposta carrega os grupos `workspace`, `meta` e `activity`, além de `git` quando `include=git` — ou apenas `{ id, archived }` sob `fields=id,archived`. O grupo `activity` também relata `model`: o alias do modelo vinculado à sessão enquanto estiver ativo neste processo, ou `null` para sessões frias (não carregadas no momento). Cada página carrega adicionalmente `total`, o tamanho do conjunto filtrado. O token de página vincula as condições de query da primeira página (incluindo a projeção); alterá-los no meio da paginação retorna `40922`. O modo `page` é uma alternativa apátrida para saltar para páginas arbitrárias: cada requisição é um snapshot independente, nenhum token é gerado e `next_page_token` é sempre `null`.
 
-With `view=by_workspace` the same filtered, sorted set is re-projected into per-workspace groups, so an overview client replaces one polling loop per workspace with a single request:
+Com `view=by_workspace`, o mesmo conjunto filtrado e ordenado é reprojetado em grupos por workspace, permitindo que um cliente de visão geral substitua um loop de polling por workspace por uma única requisição:
 
 ```json
 {
@@ -2208,13 +2208,13 @@ With `view=by_workspace` the same filtered, sorted set is re-projected into per-
 }
 ```
 
-Each group carries the workspace's first `group.page_size` sessions under the requested `sort` plus `total`, the workspace's full matching-session count (for a "view all" entry). Only workspaces with at least one matching session appear; groups order by their first session's sort key, ties broken by workspace id. `page` and `page_token` paginate over groups (the outer `total` is the group count), with the same fingerprint binding: the token also covers `view` and the grouping parameters, so flipping them mid-pagination returns `40922`.
+Cada grupo carrega as primeiras sessões de `group.page_size` do workspace sob o `sort` solicitado mais o `total`, que representa a contagem completa de sessões correspondentes do workspace (para uma entrada de "ver tudo"). Apenas workspaces com pelo menos uma sessão correspondente aparecem; os grupos são ordenados pela chave de ordenação de sua primeira sessão, com desempate pelo ID do workspace. `page` e `page_token` paginam sobre os grupos (o `total` externo é a contagem de grupos), com a mesma vinculação de impressão digital: o token também cobre `view` e os parâmetros de agrupamento, de modo que alterá-los no meio da paginação retorna `40922`.
 
-### `POST /api/v2/sessions:archive` and `POST /api/v2/sessions:restore`
+### `POST /api/v2/sessions:archive` e `POST /api/v2/sessions:restore`
 
-Batch archive/restore for session-management views. The body is `{ "ids": ["session_..."] }` — non-empty, at most 5000 unique ids (duplicates collapse). Live sessions go through the full lifecycle; cold sessions are patched on disk without being loaded.
+Arquivamento e restauração em lote para visualizações de gerenciamento de sessões. O corpo é `{ "ids": ["session_..."] }` — não vazio, com no máximo 5000 IDs únicos (duplicatas colapsam). Sessões ativas passam pelo ciclo de vida completo; sessões frias são atualizadas em disco sem serem carregadas.
 
-Only a body validation failure fails the whole request (`40001`). Otherwise the response is per-item: `data.results` keeps the input order with `{ id, ok }` or `{ id, ok: false, error }` (an unknown id reports `40401` in its own item), plus `succeeded` / `failed` counts.
+Apenas uma falha de validação do corpo resulta em falha na requisição inteira (`40001`). Caso contrário, a resposta é por item: `data.results` mantém a ordem de entrada com `{ id, ok }` ou `{ id, ok: false, error }` (um ID desconhecido relata `40401` em seu próprio item), além das contagens de `succeeded` / `failed`.
 
 ```json
 {
@@ -2232,113 +2232,113 @@ Only a body validation failure fails the whole request (`40001`). Otherwise the 
 }
 ```
 
-### MCP management (`/api/v2/mcp`)
+### Gerenciamento de MCP (`/api/v2/mcp`)
 
-The `/api/v2/mcp/*` routes are the server's unified MCP management plane: they manage the MCP server registry itself, independent of any session — global (user-level) CRUD with per-entry validation, connection-test probes, a locator-addressed inspection catalog, per-server auth-status listing, and the full OAuth flow lifecycle.
+As rotas `/api/v2/mcp/*` formam o plano unificado de gerenciamento de MCP do servidor: elas gerenciam o próprio registro de servidores MCP, independentemente de qualquer sessão — CRUD global (nível de usuário) com validação por entrada, sondagens de teste de conexão, um catálogo de inspeção endereçado por localizador, listagem de status de autenticação por servidor e todo o ciclo de vida do fluxo OAuth.
 
-| Method and path | Description |
+| Método e caminho | Descrição |
 | --- | --- |
-| `GET /api/v2/mcp/servers` | List every known MCP server |
-| `GET /api/v2/mcp/servers/{name}` | Get one server by runtime name |
-| `POST /api/v2/mcp/servers` | Add a server to the user-level `mcp.json` |
-| `PUT /api/v2/mcp/servers/{name}` | Replace a user-level entry |
-| `DELETE /api/v2/mcp/servers/{name}` | Remove a user-level entry |
-| `POST /api/v2/mcp/servers:test` | Probe a real connection to one server |
-| `POST /api/v2/mcp/servers:inspect` | Locator-addressed catalog with a batched connection probe |
-| `GET /api/v2/mcp/auth-statuses` | Per-server OAuth state over the catalog |
-| `POST /api/v2/mcp/auth:begin` | Begin an interactive OAuth flow |
-| `POST /api/v2/mcp/auth:complete` | Await the browser callback and finish the code exchange |
-| `POST /api/v2/mcp/auth:cancel` | Tear down a begun OAuth flow |
-| `POST /api/v2/mcp/auth:reset` | Clear a server's stored credentials |
+| `GET /api/v2/mcp/servers` | Listar todos os servidores MCP conhecidos |
+| `GET /api/v2/mcp/servers/{name}` | Obter um servidor pelo nome de execução (*runtime name*) |
+| `POST /api/v2/mcp/servers` | Adicionar um servidor ao `mcp.json` de nível de usuário |
+| `PUT /api/v2/mcp/servers/{name}` | Substituir uma entrada de nível de usuário |
+| `DELETE /api/v2/mcp/servers/{name}` | Remover uma entrada de nível de usuário |
+| `POST /api/v2/mcp/servers:test` | Sondar uma conexão real com um servidor |
+| `POST /api/v2/mcp/servers:inspect` | Catálogo endereçado por localizador com sondagem de conexão em lote |
+| `GET /api/v2/mcp/auth-statuses` | Estado OAuth por servidor sobre o catálogo |
+| `POST /api/v2/mcp/auth:begin` | Iniciar um fluxo OAuth interativo |
+| `POST /api/v2/mcp/auth:complete` | Aguardar o retorno (*callback*) do navegador e finalizar a troca de código |
+| `POST /api/v2/mcp/auth:cancel` | Encerrar um fluxo OAuth iniciado |
+| `POST /api/v2/mcp/auth:reset` | Limpar as credenciais armazenadas de um servidor |
 
-Two addressing schemes appear on this plane. The CRUD routes and `servers:test` take a plain runtime `name`; the inspection and OAuth routes take a **locator** — `{ "source": "global", "name" }` for a file-layer entry or `{ "source": "plugin", "pluginId", "serverName" }` for a plugin-manifest entry — because a plugin entry and a file entry can share one runtime name. Inspection items additionally carry a stable `serverId` wire id: `global:<name>` or `plugin:<pluginId>:<serverName>` (URL-encoded).
+Dois esquemas de endereçamento aparecem neste plano. As rotas de CRUD e `servers:test` utilizam um `name` de runtime simples; as rotas de inspeção e OAuth utilizam um **localizador** (*locator*) — `{ "source": "global", "name" }` para uma entrada na camada de arquivo ou `{ "source": "plugin", "pluginId", "serverName" }` para uma entrada de manifesto de plugin — visto que uma entrada de plugin e uma entrada de arquivo podem compartilhar o mesmo nome de runtime. Os itens de inspeção carregam adicionalmente um ID de fio (*wire id*) estável `serverId`: `global:<name>` ou `plugin:<pluginId>:<serverName>` (codificado em URL).
 
-Most routes accept an optional `cwd` (a query parameter, or a body field on the `:`-action routes). Without it the catalog covers the user-level file and plugin manifests only; with it, the project-root and project-local layers of that directory join in — but only when the workspace is trusted, otherwise the project layers are skipped. For `servers:test` on a stdio server, `cwd` is also the child process's working directory. Connection probes and OAuth calls wait for the server's configuration to finish loading before acting.
+A maioria das rotas aceita um `cwd` opcional (um parâmetro de query ou um campo de corpo nas rotas de ação `:`). Sem ele, o catálogo abrange apenas os manifestos de arquivo e de plugin de nível de usuário; com ele, as camadas de raiz de projeto e locais de projeto daquele diretório se juntam — mas apenas quando o workspace é confiável, caso contrário, as camadas de projeto são ignoradas. Para `servers:test` em um servidor stdio, o `cwd` também é o diretório de trabalho do processo filho. Sondagens de conexão e chamadas OAuth aguardam o carregamento da configuração do servidor ser concluído antes de agir.
 
-#### `GET /api/v2/mcp/servers` and `GET /api/v2/mcp/servers/{name}`
+#### `GET /api/v2/mcp/servers` e `GET /api/v2/mcp/servers/{name}`
 
-Lists every MCP server the management plane knows about; the second route returns the single entry with that runtime name.
+Lista todos os servidores MCP conhecidos pelo plano de gerenciamento; a segunda rota retorna a entrada única com esse nome de runtime.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `name` | path | string | **Required (get only).** Runtime name of the server |
-| `cwd` | query | string | Include the project layers of this (trusted) directory |
+| `name` | path | string | **Obrigatório (apenas para get).** Nome de execução (*runtime name*) do servidor |
+| `cwd` | query | string | Incluir as camadas de projeto deste diretório (confiável) |
 
-On success, `data` is an array of managed servers (a single object for the get route), each `{ name, config, source, origin, mutable, plugin? }`:
+Em caso de sucesso, `data` é um array de servidores gerenciados (um objeto único para a rota get), cada um contendo `{ name, config, source, origin, mutable, plugin? }`:
 
-- `source`: `global` (a config-file layer) or `plugin` (a plugin manifest)
-- `origin`: where the entry is defined — a file path or a plugin id
-- `mutable`: only user-level entries are mutable; plugin and project-layer entries are read-only
-- `config`: mutable entries carry the full config so edit UIs can prefill it; read-only entries are redacted to sorted key lists (`envKeys` / `headerKeys`) and never disclose secret values
-- `plugin`: `{ id, name }`, present on plugin entries
+- `source`: `global` (uma camada de arquivo de configuração) ou `plugin` (manifesto de plugin)
+- `origin`: onde a entrada está definida — um caminho de arquivo ou um ID de plugin
+- `mutable`: apenas entradas de nível de usuário são mutáveis; entradas de plugin e de camada de projeto são somente leitura
+- `config`: entradas mutáveis carregam a configuração completa para que UIs de edição possam pré-preenchê-la; entradas somente leitura são redigidas para listas de chaves ordenadas (`envKeys` / `headerKeys`) e nunca revelam valores secretos
+- `plugin`: `{ id, name }`, presente em entradas de plugin
 
-- `40001`: validation failure
-- `40408`: no server with that name
+- `40001`: falha de validação
+- `40408`: nenhum servidor com esse nome
 
 #### `POST` / `PUT` / `DELETE /api/v2/mcp/servers`
 
-Global CRUD against the user-level `mcp.json`. The add body is a full server config including `name` — `transport` (`stdio` / `http` / `sse`) discriminates the shape, and each entry is validated before it is written. The update body carries the same config without `name` (the path names the entry); delete takes no body. All three return the refreshed server list in `data`. A write whose name collides with a project-layer entry is rejected as read-only — edit the defining file instead; a same-named plugin entry does not block the write, and the new file entry shadows it.
+CRUD global contra o arquivo `mcp.json` de nível de usuário. O corpo de adição é uma configuração completa de servidor incluindo `name` — `transport` (`stdio` / `http` / `sse`) discrimina a estrutura, e cada entrada é validada antes de ser escrita. O corpo de atualização carrega a mesma configuração sem `name` (o caminho nomeia a entrada); a exclusão não leva corpo. Todos os três retornam a lista de servidores atualizada em `data`. Uma gravação cujo nome colida com uma entrada de camada de projeto é rejeitada como somente leitura — edite o arquivo definidor em vez disso; uma entrada de plugin com o mesmo nome não bloqueia a gravação, e a nova entrada de arquivo a oculta (*shadows*).
 
-- `40001`: validation failure, or the target entry is read-only
-- `40408`: (update/delete) no server with that name
+- `40001`: falha de validação ou a entrada de destino é somente leitura
+- `40408`: (atualização/exclusão) nenhum servidor com esse nome
 
 #### `POST /api/v2/mcp/servers:test`
 
-Probes a real connection to one server and never persists anything. Pass either `name` to test a registry entry (plugin and trusted project layers included) or `server` (a full inline config, `name` included) to probe it as-is; passing both or neither fails `40001`.
+Sonda uma conexão real com um servidor sem persistir nada. Passe `name` para testar uma entrada de registro (incluindo plugin e camadas de projeto confiáveis) ou `server` (uma configuração inline completa, incluindo `name`) para sondá-la tal como está; passar ambos ou nenhum resulta em falha `40001`.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `name` | body | string | Runtime name of a registry entry |
-| `server` | body | object | Inline server config to probe as-is |
-| `cwd` | body | string | Project layers join the resolution; also the stdio working directory |
+| `name` | body | string | Nome de execução de uma entrada de registro |
+| `server` | body | object | Configuração inline de servidor para sondar tal como está |
+| `cwd` | body | string | Camadas de projeto se juntam à resolução; também o diretório de trabalho stdio |
 
-On success, `data` is `{ success, output }`: when the connection succeeds, `output` lists the server's available tools; otherwise it carries the failure text.
+Em caso de sucesso, `data` é `{ success, output }`: quando a conexão é bem-sucedida, `output` lista as ferramentas disponíveis do servidor; caso contrário, carrega o texto da falha.
 
-- `40001`: both or neither target form passed, an invalid inline config, or a runtime name shared by multiple enabled servers
-- `40408`: no server with that name
+- `40001`: ambas ou nenhuma forma de destino passada, configuração inline inválida ou nome de runtime compartilhado por múltiplos servidores habilitados
+- `40408`: nenhum servidor com esse nome
 
 #### `POST /api/v2/mcp/servers:inspect`
 
-The locator-addressed catalog (redacted configs) plus a batched real-connection probe of every OAuth candidate.
+O catálogo endereçado por localizador (configurações redigidas) mais uma sondagem em lote de conexão real de cada candidato OAuth.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `targets` | body | array | Locators narrowing the catalog; omitted inspects all servers |
-| `cwd` | body | string | Include the project layers of this (trusted) directory |
+| `targets` | body | array | Localizadores restringindo o catálogo; omitido inspeciona todos os servidores |
+| `cwd` | body | string | Incluir as camadas de projeto deste diretório (confiável) |
 
-On success, `data` is an array of inspections, each `{ serverId, locator, runtimeName, canonicalUrl?, origin, config, enabled, editable, authStatus, checkedAt?, error? }`: `canonicalUrl` is the credential URL of a remote server, `config` is the redacted view, and `authStatus` is one of `not-applicable` / `bearer-token` / `oauth-required` / `oauth-authorized` / `oauth-expired` / `unavailable`. A runtime name shared by multiple enabled servers cannot be probed unambiguously and reports `unavailable` with an explanatory `error`. A probe that hits an expired grant may refresh or invalidate the stored credentials.
+Em caso de sucesso, `data` é um array de inspeções, cada uma contendo `{ serverId, locator, runtimeName, canonicalUrl?, origin, config, enabled, editable, authStatus, checkedAt?, error? }`: `canonicalUrl` é a URL de credencial de um servidor remoto, `config` é a visão redigida e `authStatus` é um dentre `not-applicable` / `bearer-token` / `oauth-required` / `oauth-authorized` / `oauth-expired` / `unavailable`. Um nome de runtime compartilhado por múltiplos servidores habilitados não pode ser sondado de forma ambígua e relata `unavailable` com um `error` explicativo. Uma sondagem que encontra uma concessão expirada pode atualizar ou invalidar as credenciais armazenadas.
 
-- `40001`: validation failure
-- `40408`: a `targets` locator matches nothing
+- `40001`: falha de validação
+- `40408`: um localizador em `targets` não corresponde a nada
 
 #### `GET /api/v2/mcp/auth-statuses`
 
-Per-server OAuth state over the registry catalog — the lightweight alternative to `servers:inspect` when only the auth dimension is needed.
+Estado OAuth por servidor sobre o catálogo de registro — a alternativa leve ao `servers:inspect` quando apenas a dimensão de autenticação é necessária.
 
-| Parameter | In | Type | Description |
+| Parâmetro | Em | Tipo | Descrição |
 | --- | --- | --- | --- |
-| `cwd` | query | string | Include the project layers of this (trusted) directory |
-| `verify` | query | string | `true` probes every OAuth candidate through a real connection; `false` is fully offline (config and stored tokens only); omitted preserves implicit OAuth detection, probing only unpinned remote servers without stored credentials |
+| `cwd` | query | string | Incluir as camadas de projeto deste diretório (confiável) |
+| `verify` | query | string | `true` sonda cada candidato OAuth através de uma conexão real; `false` é totalmente offline (apenas configuração e tokens armazenados); omitido preserva a detecção OAuth implícita, sondando apenas servidores remotos não fixados (*unpinned*) sem credenciais armazenadas |
 
-On success, `data` is an array of `{ name, authStatus }` with the same `authStatus` enum as `servers:inspect`. Verification probes may refresh or invalidate stored credentials.
+Em caso de sucesso, `data` é um array de `{ name, authStatus }` com o mesmo enum `authStatus` de `servers:inspect`. Sondagens de verificação podem atualizar ou invalidar credenciais armazenadas.
 
 #### `POST /api/v2/mcp/auth:begin` / `:complete` / `:cancel` / `:reset`
 
-The OAuth flow lifecycle for remote servers. `auth:begin` takes a locator body (plus the optional `cwd` query) and answers `data` `{ status: "authorization-required", flowId, authorizationUrl }` — open the URL in a browser to grant access — or `{ status: "already-authorized" }` when a grant already exists. The target server must use a remote transport (`http` / `sse`) and must not carry a static bearer token; static headers are allowed only when the config explicitly sets `auth: "oauth"`.
+O ciclo de vida do fluxo OAuth para servidores remotos. `auth:begin` recebe um corpo de localizador (mais a query opcional `cwd`) e responde com `data` `{ status: "authorization-required", flowId, authorizationUrl }` — abra a URL em um navegador para conceder acesso — ou `{ status: "already-authorized" }` quando uma concessão já existe. O servidor de destino deve usar um transporte remoto (`http` / `sse`) e não deve carregar um token de portador estático; cabeçalhos estáticos são permitidos apenas quando a configuração define explicitamente `auth: "oauth"`.
 
-`auth:complete` waits for the browser callback of a begun flow and finishes the code exchange. Its body is `{ flowId, timeoutMs? }`: the wait defaults to 15 minutes (`timeoutMs` overrides it), an idle flow expires after 15 minutes regardless, and closing the HTTP connection aborts the wait. `data` is `null` on success.
+`auth:complete` aguarda o retorno (*callback*) do navegador de um fluxo iniciado e conclui a troca de código. Seu corpo é `{ flowId, timeoutMs? }`: a espera padrão é de 15 minutos (`timeoutMs` a substitui), um fluxo ocioso expira após 15 minutos de qualquer forma, e fechar a conexão HTTP aborta a espera. `data` é `null` em caso de sucesso.
 
-`auth:cancel` tears down a begun flow (`{ flowId }`) without finishing it; unknown flows are ignored. `auth:reset` takes a locator body and clears the server's stored credentials — the invalidation event reaches live sessions.
+`auth:cancel` encerra um fluxo iniciado (`{ flowId }`) sem concluí-lo; fluxos desconhecidos são ignorados. `auth:reset` recebe um corpo de localizador e limpa as credenciais armazenadas do servidor — o evento de invalidação alcança sessões ativas.
 
-- `40001`: validation failure — including an unknown `flowId` on `:complete`, or a server that cannot do OAuth (stdio transport, a static bearer token, or static headers without `auth: "oauth"`) on `:begin`
-- `40408`: (`:begin` / `:reset`) the locator matches nothing
-- `40929`: the OAuth flow itself failed
+- `40001`: falha de validação — incluindo um `flowId` desconhecido em `:complete`, ou um servidor que não pode realizar OAuth (transporte stdio, token de portador estático ou cabeçalhos estáticos sem `auth: "oauth"`) em `:begin`
+- `40408`: (`:begin` / `:reset`) o localizador não corresponde a nada
+- `40929`: o próprio fluxo OAuth falhou
 
-## WebSocket protocol
+## Protocolo WebSocket (`WebSocket protocol`)
 
-### Connect
+### Conexão (`Connect`)
 
-The only endpoint is `ws://<host>:<port>/api/v1/ws`; authentication happens at the upgrade request (see [Authentication](#authentication) above). Once connected, the server immediately sends `server_hello`:
+O único endpoint é `ws://<host>:<port>/api/v1/ws`; a autenticação ocorre na requisição de atualização (*upgrade request*) (consulte [Autenticação](#authentication) acima). Uma vez conectado, o servidor envia imediatamente `server_hello`:
 
 ```json
 {
@@ -2353,66 +2353,63 @@ The only endpoint is `ws://<host>:<port>/api/v1/ws`; authentication happens at t
 }
 ```
 
-Note that the server never sends heartbeats and never disconnects an idle connection — keepalive and reconnection are the client's job.
+Observe que o servidor nunca envia batimentos cardíacos (*heartbeats*) e nunca desconecta uma conexão ociosa — keepalive e reconexão são responsabilidade do cliente.
 
-### Control frames
+### Quadros de controle (`Control frames`)
 
-Clients send JSON frames `{ "type", "id"?, "payload" }`; every request frame gets an acknowledgement `{ "type": "ack", "id", "code", "msg", "payload" }`, where `code` 0 means success.
+Os clientes enviam quadros JSON `{ "type", "id"?, "payload" }`; cada quadro de requisição recebe um reconhecimento `{ "type": "ack", "id", "code", "msg", "payload" }`, onde `code` 0 significa sucesso.
 
-| Frame | payload | Description |
+| Quadro | payload | Descrição |
 | --- | --- | --- |
-| `subscribe` | `{ session_ids, cursors?, agent_filter? }` | Subscribe to session events; with `cursors` (per-session `{seq, epoch}`) the server replays missed durable events |
-| `unsubscribe` | `{ session_ids }` | Drop session subscriptions |
-| `subscribe_v2` | `{ session_id, transcript, transcript_since? }` | Subscribe to transcript streams (the only transcript channel); `transcript` sets per-agent grades |
-| `unsubscribe_v2` | `{ session_id, agent_ids? }` | Detach transcript streams; omitting `agent_ids` means the whole session |
-| `watch_fs_add` / `watch_fs_remove` | `{ session_id, paths, recursive? }` | Subscribe to / unsubscribe from file-change notifications (`event.fs.changed`) |
-| `client_hello` | `{ client_id }` | Handshake frame; the remaining fields are legacy compatibility |
+| `subscribe` | `{ session_ids, cursors?, agent_filter? }` | Inscrever-se em eventos de sessão; com `cursors` ({seq, epoch} por sessão), o servidor reproduz os eventos duráveis perdidos |
+| `unsubscribe` | `{ session_ids }` | Cancelar inscrições em sessões |
+| `subscribe_v2` | `{ session_id, transcript, transcript_since? }` | Inscrever-se em fluxos de transcrição (o único canal de transcrição); `transcript` define graus por agente |
+| `unsubscribe_v2` | `{ session_id, agent_ids? }` | Desconectar fluxos de transcrição; omitir `agent_ids` significa a sessão inteira |
+| `watch_fs_add` / `watch_fs_remove` | `{ session_id, paths, recursive? }` | Inscrever-se em / cancelar inscrição de notificações de alteração de arquivos (`event.fs.changed`) |
+| `client_hello` | `{ client_id }` | Quadro de handshake; os campos restantes são para compatibilidade legada |
 
-### Events
+### Eventos (`Events`)
 
-Event frames look like `{ "type", "seq", "epoch"?, "volatile"?, "offset"?, "session_id"?, "timestamp", "payload" }`, where `type` is the event type itself. Two delivery scopes:
+Quadros de eventos têm o formato `{ "type", "seq", "epoch"?, "volatile"?, "offset"?, "session_id"?, "timestamp", "payload" }`, onde `type` é o tipo do evento em si. Dois escopos de entrega:
 
-- **Global events**: sent to every established connection, no subscription needed — `session.meta.updated`, `event.session.created`, `event.session.archived`, `event.session.work_changed`, `event.session.status_changed`, `event.workspace.*`, `event.config.*`, `event.model_catalog.*`.
-- **Session events**: sent only to connections subscribed to that session, subject to `agent_filter`. Main families:
+- **Eventos globais**: enviados a todas as conexões estabelecidas, sem necessidade de inscrição — `session.meta.updated`, `event.session.created`, `event.session.archived`, `event.session.work_changed`, `event.session.status_changed`, `event.workspace.*`, `event.config.*`, `event.model_catalog.*`.
+- **Eventos de sessão**: enviados apenas para conexões inscritas nessa sessão, sujeitos a `agent_filter`. Principais famílias:
 
-| Family | Main events |
+| Família | Eventos principais |
 | --- | --- |
-| Turns | `turn.started`, `turn.ended`, `turn.step.started` / `completed` / `interrupted` / `retrying` |
-| Streaming text | `assistant.delta`, `thinking.delta` (carry `offset` for alignment) |
-| Tool calls | `tool.call.started`, `tool.call.delta`, `tool.progress`, `tool.result` |
-| Interactions | `event.approval.requested` / `resolved`, `event.question.requested` / `answered` / `dismissed` |
-| Subagents | `subagent.spawned` / `started` / `suspended` / `completed` / `failed` |
-| Background | `task.started` / `terminated`, `shell.started` / `output` / `completed` |
-| Misc | `compaction.*`, `skill.activated`, `goal.updated`, `prompt.*`, `error`, `warning` |
+| Turnos | `turn.started`, `turn.ended`, `turn.step.started` / `completed` / `interrupted` / `retrying` |
+| Texto em streaming | `assistant.delta`, `thinking.delta` (carregam `offset` para alinhamento) |
+| Chamadas de ferramenta | `tool.call.started`, `tool.call.delta`, `tool.progress`, `tool.result` |
+| Interações | `event.approval.requested` / `resolved`, `event.question.requested` / `answered` / `dismissed` |
+| Subagentes | `subagent.spawned` / `started` / `suspended` / `completed` / `failed` |
+| Segundo plano | `task.started` / `terminated`, `shell.started` / `output` / `completed` |
+| Diversos | `compaction.*`, `skill.activated`, `goal.updated`, `prompt.*`, `error`, `warning` |
 
-Three global lifecycle events keep a cross-workspace overview fresh without polling per workspace. `event.session.archived` fires on both the live and the cold archive path; its envelope `session_id` is the global watermark `__global__` and the real session id rides in the payload: `{ "type": "event.session.archived", "workspace_id": "wd_...", "sessionId": "session_..." }` (payload keys `workspace_id` / `sessionId`). `event.workspace.created` / `updated` carry the full workspace object (`{ id, root, name, created_at, last_opened_at, session_count }` — an `updated` also fires when a session creation touches the workspace), and `event.workspace.deleted` carries `{ "workspace_id", "root" }`. These events only cover changes made inside this server process; changes from other processes (for example a CLI writing to the same home) surface through the index reconciliation (about a minute), so overview clients should keep a low-frequency fallback poll. There is no session-deleted event.
+Três eventos globais de ciclo de vida mantêm uma visão geral multi-workspace atualizada sem polling por workspace. `event.session.archived` é disparado tanto no caminho de arquivo ativo quanto no frio; seu envelope `session_id` é a marca d'água global `__global__` e o ID real da sessão viaja no payload: `{ "type": "event.session.archived", "workspace_id": "wd_...", "sessionId": "session_..." }` (chaves do payload `workspace_id` / `sessionId`). `event.workspace.created` / `updated` carregam o objeto de workspace completo (`{ id, root, name, created_at, last_opened_at, session_count }` — um `updated` também é disparado quando a criação de uma sessão toca o workspace), e `event.workspace.deleted` carrega `{ "workspace_id", "root" }`. Esses eventos cobrem apenas alterações feitas dentro deste processo de servidor; alterações de outros processos (por exemplo, uma CLI gravando na mesma home) aparecem por meio da reconciliação de índice (cerca de um minuto), portanto, clientes de visão geral devem manter um polling de fallback de baixa frequência. Não existe evento de exclusão de sessão.
 
-Events also split into durable and volatile: durable events carry a strictly increasing `seq`, are journaled, and can be replayed; volatile events (the `*.delta` family, `tool.progress`, `shell.*`, and similar) are marked `volatile: true` and never replayed. When consuming a volatile text stream, compare `offset` (the cumulative character offset within the turn) against your locally accumulated text: below the local length means a duplicate frame; above means a gap that needs snapshot recovery.
+Os eventos também se dividem em duráveis e voláteis: eventos duráveis carregam um `seq` estritamente crescente, são gravados em diário (*journaled*) e podem ser reproduzidos; eventos voláteis (a família `*.delta`, `tool.progress`, `shell.*` e similares) são marcados com `volatile: true` e nunca são reproduzidos. Ao consumir um fluxo de texto volátil, compare o `offset` (o deslocamento cumulativo de caracteres dentro do turno) com o seu texto acumulado localmente: ficar abaixo do comprimento local significa um quadro duplicado; ficar acima significa uma lacuna que requer recuperação de snapshot.
 
-### Reconnect and recovery
+### Reconexão e recuperação (`Reconnect and recovery`)
 
-After reconnecting, pass each session's last applied `{seq, epoch}` in `subscribe`'s `cursors`; the server replays the gap. If you fall more than the buffer (1000 events) behind, or the cursor is no longer valid, you get `resync_required` instead. In that case, call `GET /api/v1/sessions/{session_id}/snapshot` for a full snapshot (with `as_of_seq` and `epoch`), then subscribe again with the fresh cursor.
+Após a reconexão, passe o último `{seq, epoch}` aplicado de cada sessão nos `cursors` de `subscribe`; o servidor reproduz a lacuna. Se você ficar atrasado além do buffer (1000 eventos) ou se o cursor não for mais válido, você receberá `resync_required`. Nesse caso, chame `GET /api/v1/sessions/{session_id}/snapshot` para obter um snapshot completo (com `as_of_seq` e `epoch`), e então inscreva-se novamente com o cursor atualizado.
 
-### Transcript protocol
+### Protocolo de transcrição (`Transcript protocol`)
 
-`subscribe_v2`'s `transcript` field sets a per-agent grade: `off` / `turn` / `block` / `delta` (the `"*"` key sets the default grade), with higher grades pushing finer detail. An agent with a non-`off` grade receives two frame types: `transcript.reset` (a baseline snapshot; history pages in over REST) and `transcript.ops` (incremental op batches with a per-agent strictly increasing `seq`). The agent's legacy events are suppressed on that connection and carried by transcript frames instead. After a disconnect, resume with `transcript_since`; when the server's op journal cannot cover the gap (REST catch-up returns `complete: false`), do a full refresh. The REST counterparts are `GET .../transcript` (turn-paged) and `GET .../transcript/ops?since_seq=` (op-batch catch-up).
+O campo `transcript` de `subscribe_v2` define um grau por agente: `off` / `turn` / `block` / `delta` (a chave `"*"` define o grau padrão), com graus mais altos enviando detalhes mais refinados. Um agente com grau diferente de `off` recebe dois tipos de quadros: `transcript.reset` (um snapshot de linha de base; páginas de histórico chegam via REST) e `transcript.ops` (lotes de operações incrementais com um `seq` estritamente crescente por agente). Os eventos legados do agente são suprimidos nessa conexão e transportados por quadros de transcrição. Após uma desconexão, retome com `transcript_since`; quando o diário de operações do servidor não puder cobrir a lacuna (a recuperação via REST retorna `complete: false`), faça uma atualização completa. As contrapartes REST são `GET .../transcript` (paginado por turno) e `GET .../transcript/ops?since_seq=` (recuperação em lote de operações).
 
+## Endpoints binários e de streaming (`Binary and streaming endpoints`)
 
-## Endpoints binários e de streaming
-## Binary and streaming endpoints
+Os seguintes endpoints transmitem corpos binários em vez de um payload JSON. Suas capacidades HTTP diferem por endpoint:
 
-The following endpoints stream binary bodies instead of a JSON payload. Their HTTP capabilities differ per endpoint:
-
-| Method and path | Description | Range (206) | ETag / 304 |
+| Método e caminho | Descrição | Range (206) | ETag / 304 |
 | --- | --- | --- | --- |
-| `GET /api/v1/files/{file_id}` | Download an uploaded file | Yes | No (sends an `etag` header but ignores `If-None-Match`) |
-| `GET /api/v1/sessions/{session_id}/fs/{path}:download` | Download a session workspace file | Yes | Yes |
-| `GET /api/v1/fs:content` | Raw bytes of any host file (gated only by the token — be careful when exposing the port) | Yes | Yes |
-| `POST /api/v1/sessions/{session_id}/export` | Export the session with diagnostics (zip stream) | No | No |
+| `GET /api/v1/files/{file_id}` | Baixar um arquivo enviado | Sim | Não (envia um cabeçalho `etag`, mas ignora `If-None-Match`) |
+| `GET /api/v1/sessions/{session_id}/fs/{path}:download` | Baixar um arquivo de workspace de sessão | Sim | Sim |
+| `GET /api/v1/fs:content` | Bytes brutos de qualquer arquivo do host (protegido apenas pelo token — cuidado ao expor a porta) | Sim | Sim |
+| `POST /api/v1/sessions/{session_id}/export` | Exportar a sessão com diagnósticos (fluxo zip) | Não | Não |
 
-Error semantics differ as well: `GET /api/v1/files/{file_id}` answers lookup and storage failures with real 404 / 500 statuses (parameter validation still uses the HTTP 200 envelope), while the other three report every failure through the standard [response envelope](#response-envelope) — clients must keep checking the envelope `code` on those endpoints.
+A semântica de erros também difere: `GET /api/v1/files/{file_id}` responde a falhas de busca e armazenamento com status reais 404 / 500 (a validação de parâmetros ainda usa o envelope HTTP 200), enquanto os outros três relatam cada falha por meio do [envelope de resposta padrão](#response-envelope) — os clientes devem continuar verificando o `code` do envelope nesses endpoints.
 
-## Next steps
+## Próximos passos (`Next steps`)
 
-- [Using Kimi Code in the browser](../guides/web.md) — start the server and use Kimi Code in a browser
-- [kimi command](./kimi-command.md#kimi-web) — all `kimi web` command-line options
+- [Usando o Kimi Code no navegador](../guides/web.md) — inicie o servidor e use o Kimi Code em um navegador
